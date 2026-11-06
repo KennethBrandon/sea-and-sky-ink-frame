@@ -402,12 +402,92 @@ So a battery makes the frame a UPS: it rides through power cuts, and when the ce
 out it dies like any power cut and boots when the power returns. `tick.py` settles on a
 photo with a small battery on it first and flushes the SD card (CLAUDE.md "Power and
 battery rules").
-Sleeping between updates would take a hardware mod and isn't planned.
+Sleeping between updates takes a hardware mod: [the latch mod](#the-latch-mod-planned-prd-m4),
+planned as PRD M4 on 2026-11-05.
 
 Measured with the first pack (see [the first full run-down](#2026-11-07-the-first-full-run-down)):
 about 0.2 A from the cell, 10 h 42 min from a full 2000 mAh charge, the power cutting out at
 3.00 V, and about 2.07 A charging from flat. `battery.low_volts` is 3.3 V, about 17 minutes
 before the cutoff.
+
+### The latch mod (planned, PRD M4)
+
+![The latch mod: two PN2222s, four 1N4007s, three resistors, the mode switch and the next button](latch-mod.svg)
+
+The circuit is [latch-mod.svg](latch-mod.svg), and [latch-breadboard.svg](latch-breadboard.svg)
+places every leg in a numbered breadboard hole for the first build. It fits on the
+smallest board of a perfboard kit (2 × 8 cm, about 7 by 30 holes), which also fits by
+the power switch.
+
+![The same circuit on a breadboard, hole by hole](latch-breadboard.svg)
+What the board lacks is a way for the RTC alarm, or the Pi itself, to work the power
+switch. The switch (Key1) ties the gate of Q6 to SYS; Q6 on pulls Q5's gate down, Q5
+passes SYS to the boost, and the frame is on. Q6 is drawn as an N-channel FET (though
+labeled AO3401, a P-channel part): confirm before building that the gate pad reads
+about SYS with the switch on and about 0 V with it off. The mod adds two more ways to
+pull that gate up, so that any of the switch, the RTC alarm or the Pi keeps the frame on:
+
+- **The alarm.** The DS3231's `INT/SQW` is open-drain, active low, and its pull-up (R9) is
+  dead when the board is off, so add a 100 kΩ pull-up from INT to SYS. Two NPN
+  transistors (PN2222, from the Owner's RexQualis starter kit) turn that low into a pull
+  up on the gate node. Q_a inverts: base through 10 kΩ to INT, emitter to ground,
+  collector through 100 kΩ to SYS. Q_b follows: base to Q_a's collector, collector to
+  SYS, emitter through a 1N4007 diode (anode at the emitter) to the gate node. INT high
+  (no alarm): Q_a is on, Q_b's base sits near ground, Q_b is off, the gate node is left
+  alone. INT low (alarm): Q_a is off, Q_b's base is pulled up, Q_b conducts and the gate
+  node rises to about SYS − 1.4 V, enough for Q6. The alarm flag, and so INT, stays low
+  until software clears it. (A single PNP would do the same with no standby draw; the
+  kit has none, and the two-NPN version costs about 50 µA.)
+- **The hold pin.** BCM 26 (header pin 37) through a 1N4007 diode (anode at the GPIO)
+  to the gate node, which then sees about 2.6 V. The firmware sets the pin high at
+  power-up (`gpio=26=op,dh` in `config.txt`), long before the kernel driver touches the
+  RTC, and the `gpio-poweroff` overlay (`dtoverlay=gpio-poweroff,gpiopin=26,active_low`)
+  drops it at the very end of a shutdown, which cuts the power. The two diodes keep the
+  gate node, at SYS when the switch is on, from back-feeding the GPIO or Q_b's emitter.
+- **The mode switch** (Owner, 2026-11-05): a toggle switch whose "on" position means
+  Wi-Fi and the dashboard, and whose "off" position means low power. Its common goes to
+  ground; its "on" contact goes to **BCM 6** (header pin 31, read with the Pi's pull-up:
+  low = on) and, through a 1N4007 (anode on the INT side), to INT. Flipping it on while
+  the frame sleeps pulls INT low, which turns the frame on through the alarm path; once
+  the Pi is up it reads BCM 6 and stays up. The DS3231's INT is open-drain, so grounding
+  it from outside does the chip no harm; it only masks the alarm, which doesn't matter
+  while the frame is awake.
+- **The next button:** a momentary button (the kit has tactile ones) wired the same way:
+  common to ground, the other side to **BCM 5** (header pin 29, pull-up: low = pressed)
+  and through a 1N4007 to INT. Asleep, a press powers the frame on; awake, the Pi sees
+  the press on BCM 5. Either way it means "show the next screen now".
+- **Wake reasons** the Pi can tell apart at boot: the alarm flag pending → alarm; BCM 6
+  low → the switch; neither, and USB absent → the button (its press is over by then);
+  neither, and USB present → the power came back.
+- **The original power switch (Key1)** stays the hard switch: on, it holds the frame
+  powered whatever the mode switch says, so it must be off for the frame to sleep.
+- **Solder points**, all on the top side except the header's: the two pads of R18 (INT on
+  the RTC side), the header-side pad of R19 (BCM 26), the two pads of Key1 (SYS and the
+  gate node), ground, and header pins 29 and 31 (BCM 5 and 6) on the solder side of J3.
+  Parts, all in the kit but the toggle: two PN2222, four 1N4007, two 100 kΩ, one 10 kΩ,
+  one tactile button, plus a small SPST toggle or slide switch. Build it on the kit's
+  breadboard first, with short leads soldered to the pads; move it to a scrap of
+  perfboard by the switch once it wakes and sleeps properly.
+- **Off-state draw:** Q_a on through its 100 kΩ, about 50 µA (about 1 mAh a day); the RTC
+  on its coin cell. If the gate drive is marginal with a low pack (SYS near 3.3 V gives
+  about 1.7 V at the gate), put two 100 kΩ in parallel on Q_b's base, for twice the
+  standby draw. Measure it (B5).
+- **Fail-safe:** if the Pi crashes before setting the next alarm, the hold pin stays
+  high and the frame stays on, reachable, until the pack is flat. Setting a fallback
+  alarm first thing at boot bounds that.
+- **Still to confirm** (B1, before soldering): that the DS3231 drives INT from VBAT with
+  VCC at 0 V. The datasheet says that with BBSQW = 0 (its power-up state) "the INT/SQW
+  pin goes high impedance when VCC < VPF", so on battery the alarm can only reach the
+  pin if BBSQW has been set first. The Linux driver does that: `rtc-ds1307` with
+  `wakeup-source` writes INTCN and BBSQW into the control register at probe, with the
+  comment "be sure alarms can trigger when we're running on Vbackup". That the alarm
+  then drives the pin on battery is an inference shared with the kernel, not a datasheet
+  promise, and no commercial design demonstrates it: Witty Pi 2 keeps its DS3231 on VCC
+  in standby, and Witty Pi 4 uses a PCF85063A (research, 2026-11-05). The bench test in
+  PRD B1 settles it on this board, and must be run with the kernel driver loaded, or
+  with BBSQW set by hand.
+- **Halt is not a low-power state:** a halted Pi Zero 2 W still draws about 45 mA, and
+  `gpio-poweroff` disables the GPIO 3 wake. Cutting the power is the only way down.
 
 ## Waveshare software
 
