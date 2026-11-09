@@ -24,7 +24,7 @@ import json
 import logging
 import math
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field, replace
 from datetime import time
 from pathlib import Path
@@ -133,10 +133,15 @@ class Schedule:
         return any(s.screen == "photo" for s in self.day + self.night)
 
     def without_photos(self) -> Schedule:
-        """This schedule when there's no photo to show: each rotation keeps its cycle, so
-        the other steps still change when they would have."""
-        return replace(self, day=_without_photos(self.day, "tides"),
-                       night=_without_photos(self.night, "sky"))
+        """This schedule when there's no photo to show."""
+        return self.without(("photo",))
+
+    def without(self, screens: Iterable[str]) -> Schedule:
+        """This schedule without steps of `screens` (nothing to show, or no data for this place,
+        screens.py): each rotation keeps its cycle, so the other steps still change when they
+        would have."""
+        drop = frozenset(screens)
+        return replace(self, day=_without(self.day, drop, "tides"), night=_without(self.night, drop, "sky"))
 
 
 @dataclass(frozen=True)
@@ -677,14 +682,14 @@ def _fit_steps(steps: tuple[Step, ...]) -> tuple[Step, ...]:
     return (*kept[:-1], replace(kept[-1], minutes=min(kept[-1].minutes + extra, 1440)))
 
 
-def _without_photos(steps: tuple[Step, ...], fallback: ScreenKind) -> tuple[Step, ...]:
-    """A rotation with its photo steps gone and the same cycle: the step before a photo runs
-    on through it, and a photo at the start gives its time to the first screen after it. A
-    rotation of only photos becomes one step of `fallback` for the whole cycle."""
+def _without(steps: tuple[Step, ...], drop: frozenset[str], fallback: ScreenKind) -> tuple[Step, ...]:
+    """A rotation with its steps of `drop` gone and the same cycle: the step before one runs
+    on through it, and one at the start gives its time to the first screen after it. A
+    rotation of nothing else becomes one step of `fallback` for the whole cycle."""
     kept: list[Step] = []
     lead = 0
     for step in steps:
-        if step.screen != "photo":
+        if step.screen not in drop:
             kept.append(replace(step, minutes=step.minutes + lead))
             lead = 0
         elif kept:

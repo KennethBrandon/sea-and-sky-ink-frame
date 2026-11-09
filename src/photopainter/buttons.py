@@ -44,7 +44,7 @@ from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 
-from photopainter import hotspot, state
+from photopainter import hotspot, screens, state
 from photopainter.config import Config, ConfigError, edit_config, load_config
 from photopainter.hardware.buttons import ButtonsUnavailable, GpioButtons
 from photopainter.schedule import Overrides, Pin, SunTimes, move_cycle, rotation_at, show_now_until
@@ -198,8 +198,7 @@ def step(action: str, now: datetime, config: Config, folder: Path, sun: SunTimes
     overrides = Overrides.from_dict(state.read_json(folder / state.OVERRIDES, {}))
     if _photos_only(overrides.active_pin(now)):
         return step_photo(action, now, config, folder)
-    if config.schedule.has_photos() and not _images(config):
-        config = replace(config, schedule=config.schedule.without_photos())
+    config = screens.schedule_here(config, photos=bool(_images(config)))
     steps = rotation_at(now, config, sun)
     if len(steps) == 1:  # a slideshow goes through its photos; anything else has nowhere to go
         return step_photo(action, now, config, folder) if steps[0].screen == "photo" else None

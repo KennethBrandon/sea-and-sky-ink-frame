@@ -171,6 +171,7 @@ function renderStatus() {
   renderActivity(st);
   renderAlerts(st);
   renderMode(st);
+  renderMissing(st);
   renderHealth(st);
   renderBatteryNow(st);
   maybeLoadBattery(st);
@@ -319,12 +320,17 @@ function scheduleSummary() {
 function renderMode(st) {
   const mode = st.mode;
   const showNow = mode.kind === "photo" && mode.photo;
+  const why = st.screens_why || {};  // screens with no data where the frame is (e.g. no harbor chart)
   for (const b of $$("#modes [data-kind]")) {
     const on = b.dataset.kind === mode.kind && !showNow;
     b.setAttribute("aria-pressed", on ? "true" : "false");
     b.classList.toggle("working", S.working === b.dataset.kind);
     b.closest(".seg").classList.toggle("on", on);
+    b.closest(".seg").classList.toggle("unavailable", !!why[b.dataset.kind]);
+    b.disabled = !!why[b.dataset.kind];
+    b.title = why[b.dataset.kind] || "";
   }
+  for (const b of $$("#modes [data-preview]")) b.disabled = !!why[b.dataset.preview];
   const dn = st.day_night;
   $("#until-next").textContent = dn ? `${dn.next} · ${time(dn.next_at)}` : "the next change";
   // With a pin on, the chips say how long it lasts (tapping one changes that); on Auto they
@@ -1427,6 +1433,23 @@ function renderSchedule() {
 
 const BATTERY_ORDER = ["capacity_mah", "indicator_volts", "low_volts", "low_power", "low_power_after_minutes", "data_every_hours"];
 
+/* A screen with no data where the frame is (e.g. no harbor chart here) sits out the schedule:
+   its box says so first. Kept up by each status poll, since the boxes are drawn from the config. */
+function missingNote(why) {
+  return el("p", { class: "group-note box-note missing-note" }, `${why}. Until then it's left out of the schedule.`);
+}
+
+function renderMissing(st) {
+  const why = st.screens_why || {};
+  for (const section of BOXES) {
+    const form = document.getElementById(section);
+    const note = form && form.querySelector(".missing-note");
+    if (!form || (note && note.textContent.startsWith(why[section] || "\u0000"))) continue;
+    if (note) note.remove();
+    if (why[section] && form.children.length) form.prepend(missingNote(why[section]));
+  }
+}
+
 /* A screen's box: its config section, without the settings other screens read too. */
 function renderBox(section) {
   const fields = fieldsFor(S.config[section] || {}, section).filter((f) => !(f.dataset.field in SHARED_FIELDS));
@@ -1441,6 +1464,8 @@ function renderBox(section) {
   } else if (section === "photos") {
     notes.push(el("p", { class: "group-note" }, "Hide or unhide photos in the grid below."));
   }
+  const missing = S.status && S.status.screens_why && S.status.screens_why[section];
+  if (missing) notes.push(missingNote(missing));
   if (section === "battery") {  // the pack, its voltages from the higher down, then low power
     const place = (f) => {
       const i = BATTERY_ORDER.indexOf(f.dataset.field.split(".")[1]);

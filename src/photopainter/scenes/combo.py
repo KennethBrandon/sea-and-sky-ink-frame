@@ -31,6 +31,7 @@ Not designed yet: a portrait layout (PRD Q6). On a 480×800 canvas this is cropp
 
 from __future__ import annotations
 
+import logging
 from dataclasses import replace
 from datetime import datetime, timedelta
 
@@ -39,11 +40,13 @@ import numpy as np
 from photopainter import places
 from photopainter.render.draw import INK, InkCanvas, font, text_width
 from photopainter.scenes import harbor as chart
+from photopainter.scenes import photo as photo_scene
 from photopainter.scenes import sea, sky, tides
 from photopainter.scenes.base import Scene, SceneContext
 
 BLACK, WHITE, BLUE, RED = INK["black"], INK["white"], INK["blue"], INK["red"]
 
+log = logging.getLogger(__name__)
 W, H = 800, 480
 PANEL = (W // 2, H // 2)
 DIVIDER = 2  # px, black, between the panels
@@ -188,12 +191,12 @@ def harbor_view(ctx: SceneContext, data: dict) -> chart.View:
                       deg_per_px_lat=lat_per_px, height=PANEL[1], south=full.south)
 
 
-def harbor_panel(m: tides.DayModel, ctx: SceneContext) -> np.ndarray:
+def harbor_panel(m: tides.DayModel, ctx: SceneContext, data: dict | None = None) -> np.ndarray:
     """The map with its marks, names, wind and swell. The tide, the rose and the title block
     are left out: the tide panel beside it has them. Its helpers draw on the full chart's
     canvas, so this draws there and keeps the top left corner."""
     width, height = PANEL
-    data = chart.harbor_data(ctx)
+    data = chart.harbor_data(ctx) if data is None else data
     view = harbor_view(ctx, data)
     c = InkCanvas((chart.W, chart.H), "white")
     the_map = chart.draw_map(c, data, view, chart.tide_now(m))
@@ -220,15 +223,31 @@ def _no_tide(line: str | None) -> str | None:
     return "  ·  ".join(part for part in line.split("  ·  ") if " tide " not in part) or None
 
 
-def sea_panel(at: datetime, ctx: SceneContext) -> np.ndarray:
-    """The picture at half size, with only the swell, the wind and the water in words."""
+def sea_panel(at: datetime, ctx: SceneContext, wide: bool = False) -> np.ndarray:
+    """The picture at half size, with only the swell, the wind and the water in words.
+    `wide`: across the whole bottom row, reaching twice as far either side at the same size."""
     m = sea.sea_model(at, ctx)
     m = replace(m, words=(None, m.words[1], _no_tide(m.words[2])), updated=None)
-    c = InkCanvas(PANEL, "white")
+    c = InkCanvas((W, PANEL[1]) if wide else PANEL, "white")
     loc, place = ctx.config.location, sea.place_for(ctx)
     sea.draw(c, m, ctx.config.sky.center_azimuth_deg, places.skyline_for(loc.lat, loc.lon, ctx.data_dir), scale=0.5,
-             words=SEA_WORDS, jetty=None if place is None else place.jetty)
+             words=SEA_WORDS, jetty=None if place is None else place.jetty,
+             half_span=sea.HALF_SPAN_DEG * (2 if wide else 1))
     return c.indices()
+
+
+# --- no harbor chart here: the photo ---------------------------------------------------------
+
+
+def photo_panel(ctx: SceneContext) -> np.ndarray | None:
+    """The photo the rotation is on, dithered for a quarter of the panel (Owner, 2026-11-08), or
+    None with no photo that can be read."""
+    for path in photo_scene.current(ctx):
+        try:
+            return photo_scene.render_at(path, PANEL, ctx.config)
+        except Exception as exc:  # noqa: BLE001 - an unreadable file: try the next, as photos do
+            log.warning("combo: skipping %s: %s", path.name, exc)
+    return None
 
 
 # --- the screen -----------------------------------------------------------------------------
@@ -241,10 +260,19 @@ def render(scene: Scene, ctx: SceneContext) -> np.ndarray:
     full = np.full((H, W), WHITE, dtype=np.uint8)
     full[:height, :width] = tide_panel(day, ctx)
     full[:height, width:] = sky_panel(sky.sky_model(scene.draw_for, ctx), ctx)
-    full[height:, :width] = harbor_panel(day, ctx)
-    full[height:, width:] = sea_panel(scene.draw_for, ctx)
+    loc = ctx.config.location
+    chart_data = places.harbor_for(loc.lat, loc.lon, ctx.data_dir)
+    lower = None if chart_data is not None else photo_panel(ctx)
+    if chart_data is not None:
+        full[height:, :width] = harbor_panel(day, ctx, chart_data)
+    elif lower is not None:  # no harbor chart here: the photo in its place
+        full[height:, :width] = lower
+    if chart_data is None and lower is None:  # nor any photo: the sea across the bottom
+        full[height:, :] = sea_panel(scene.draw_for, ctx, wide=True)
+    else:
+        full[height:, width:] = sea_panel(scene.draw_for, ctx)
     half = DIVIDER // 2
-    full[:, width - half:width + half] = BLACK
+    full[:height if chart_data is None and lower is None else H, width - half:width + half] = BLACK
     full[height - half:height + half, :] = BLACK
     out = np.full((ctx.canvas[1], ctx.canvas[0]), WHITE, dtype=np.uint8)  # not designed yet: cropped
     rows, cols = min(out.shape[0], H), min(out.shape[1], W)

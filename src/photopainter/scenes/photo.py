@@ -90,6 +90,21 @@ def render(scene: Scene, ctx: SceneContext) -> np.ndarray:
     raise NoPhoto(f"no photos to show in {folder(ctx)}")
 
 
+def current(ctx: SceneContext) -> list[Path]:
+    """The photo the rotation is on, then the rest of it: the last one shown if it's still
+    there and not hidden, else the next. Empty with no photos to show."""
+    hidden = set(ctx.config.photos.hidden)
+    images = [p for p in _images(folder(ctx)) if p.name not in hidden]
+    last = _slideshow(ctx).last_shown(folder(ctx))
+    here = [p for p in images if p.name == last]
+    return here + [p for p in rotation_order(images, last) if p not in here]
+
+
+def render_at(path: Path, size: tuple[int, int], config: Config) -> np.ndarray:
+    """A photo dithered for a canvas of `size` (width, height), as photos are for the panel."""
+    return render_photo(open_image(path), options(config), size=size)
+
+
 def record_shown(ctx: SceneContext, name: str) -> None:
     """Move the rotation on: `name` was the last photo shown."""
     _slideshow(ctx).record(folder(ctx), name)

@@ -106,6 +106,8 @@ src/photopainter/
   buttons.py        # `photopainter buttons`: presses into actions (Decoder); forward and back
                     #   through the schedule or, in photos only, the photos; its own service,
                     #   since low power stops the dashboard
+  screens.py        # which screens can be shown here: missing() (no harbor chart for this place),
+                    #   schedule_here(): the rotations without them, for the tick, buttons and dashboard
   places.py         # place data (PRD §9): skyline, harbor chart, jetty, matched by location from
                     #   ~/.config/photopainter/places/ then data/places/; none = open horizon,
                     #   no jetty, no harbor chart
@@ -589,7 +591,10 @@ These are enforced in `hardware/panel.py`; keep them that way.
   layout is a first design, picked from previews on the Mac and not judged on the panel yet. 0.8 s to
   render on the Mac against 0.6 s for the sky, 67 MB peak against 76 MB; not timed on the Pi.
   Side by side, the sky keeps its twilight after sunset while the sea goes dark as soon as the
-  Sun is down, which is how each full screen already behaves.
+  Sun is down, which is how each full screen already behaves. Where the place has no harbor chart
+  (Owner, 2026-11-08), its quarter shows the photo the rotation is on, dithered for that size
+  (`photo.current`, `render_at`); with no photo either, the sea runs across the whole bottom row,
+  reaching twice as far either side at the same size.
 
 ## Power and battery rules
 

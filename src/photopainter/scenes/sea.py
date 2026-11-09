@@ -463,15 +463,16 @@ def _words(c: InkCanvas, m: SeaModel, look: Look, words: WordStyle = WordStyle()
 
 def draw(c: InkCanvas, m: SeaModel, center_az: float, skyline: Skyline | None,
          style: SeaStyle = SeaStyle(), scale: float = 1.0, words: WordStyle = WordStyle(),
-         jetty: Jetty | None = None) -> None:
+         jetty: Jetty | None = None, half_span: float = HALF_SPAN_DEG) -> None:
     """The picture on `c`. `scale` draws it smaller (the combo screen's panel: 0.5 on a canvas
     half the size); 1.0 is the screen as approved. `skyline` and `jetty` are the place's
-    (`places.skyline_for`, `place_for`); None leaves them out."""
+    (`places.skyline_for`, `place_for`); None leaves them out. `half_span` is how far either side
+    of `center_az` the picture reaches (wider for the combo's sea across its bottom row)."""
     width, height = c.size
     look = DAY_LOOK if m.daylight else NIGHT_LOOK
     style = style.scaled(scale) if scale != 1.0 else style
     horizon = height // 3
-    az0, span = center_az - HALF_SPAN_DEG, 2 * HALF_SPAN_DEG
+    az0, span = center_az - half_span, 2 * half_span
     az_x = lambda az: ((az - az0 + 180) % 360 - 180) / span * width  # noqa: E731
 
     overcast = m.sky == "overcast"

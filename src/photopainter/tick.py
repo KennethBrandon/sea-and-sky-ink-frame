@@ -39,7 +39,8 @@ When something goes wrong the panel keeps its image, status.json says why, and t
 tick tries again (PRD.md §3 "When things go wrong"):
 
 - a screen fails to render, or the panel fails: `last_error`, exit status 1
-- no photos in the folder: photo steps give way to the screens around them (`Schedule.without_photos`)
+- no photos in the folder: photo steps give way to the screens around them, and so does a screen
+  with no data for this place, such as the harbor chart (`screens.schedule_here`); a pin of one is ignored
 
 One tick runs at a time: a second one (the dashboard's while the timer's is refreshing)
 waits for the first, then finds its key showing or draws what it came for.
@@ -63,7 +64,7 @@ from typing import Any
 
 import numpy as np
 
-from photopainter import hotspot, power, state
+from photopainter import hotspot, power, screens, state
 from photopainter.config import Config, load_config
 from photopainter.hardware.battery import Battery, BatteryReader, BatteryUnavailable, FakeBattery, Reading
 from photopainter.hardware.fake import FakePanel
@@ -514,10 +515,12 @@ class _Tick:
                 return Scene("photo", f"{CLOCK_PHOTO_KEY}/{hour}", self.now), False, Overrides()
             return Scene("message", CLOCK_KEY, self.now, message=CLOCK_MESSAGE), False, Overrides()
         overrides = Overrides.from_dict(state.read_json(self.dir / state.OVERRIDES, EMPTY_OVERRIDES))
-        config = self.config
-        if config.schedule.has_photos() and not photo_scene.available(config):
-            log.debug("no photos in %s: skipping photo steps", config.photos.path)
-            config = replace(config, schedule=config.schedule.without_photos())
+        gone = screens.missing(self.config)
+        config = screens.schedule_here(self.config, photos=photo_scene.available(self.config), gone=gone)
+        pin = overrides.active_pin(self.now)
+        if pin is not None and pin.kind in gone:  # pinned before a move: let it lapse
+            log.info("ignoring the %s pin: %s", pin.kind, gone[pin.kind])
+            overrides = replace(overrides, pin=None)
         try:
             decision = decide(self.now, config, overrides, self.sun)
             change = upcoming_change(self.now, config, overrides, self.sun)

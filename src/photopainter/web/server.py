@@ -9,7 +9,7 @@ child process, one at a time.
 | Method | Path | Does |
 |---|---|---|
 | GET | `/` | The dashboard page |
-| GET | `/api/status` | `status.json` as the tick wrote it (its `battery` is the tick's last reading), plus: `server_time`, `timezone`, `location`, `mode` (the pin in effect, or Auto), `overrides`, `day_night` (`is_day`, `next_at`, `next`: "sunset"/"sunrise"), `ticks` (`running`, `queued`), `image` (`version`, `width`, `height` of current.png), `config_error`, `screens` (which kinds can be drawn), `fake_panel`, `health` (`health.system`; among it `network`: [{`interface`, `ipv4`, `ipv6`}] for each interface with an address, and `tailscale`: {`state`: connected, stopped, logged_out or not_installed, `ips`, `dns_name`, `online`}, each null on the Mac), `sources` (`health.sources`), `problems` ([{`level`, `text`}]), `upcoming` ([{`at`, `kind`, `photo`, `minutes`, `why`}]: the next few changes the schedule makes on its own; `minutes` is how long until the change after it (null if none); `why` is sunrise, sunset, pin_ends, photo, photo_ends, redraw (the same screen drawn afresh) or schedule) |
+| GET | `/api/status` | `status.json` as the tick wrote it (its `battery` is the tick's last reading), plus: `server_time`, `timezone`, `location`, `mode` (the pin in effect, or Auto), `overrides`, `day_night` (`is_day`, `next_at`, `next`: "sunset"/"sunrise"), `ticks` (`running`, `queued`), `image` (`version`, `width`, `height` of current.png), `config_error`, `screens` (which kinds can be drawn here), `screens_why` (why one can't: {kind: text}, e.g. no harbor chart for this place), `fake_panel`, `health` (`health.system`; among it `network`: [{`interface`, `ipv4`, `ipv6`}] for each interface with an address, and `tailscale`: {`state`: connected, stopped, logged_out or not_installed, `ips`, `dns_name`, `online`}, each null on the Mac), `sources` (`health.sources`), `problems` ([{`level`, `text`}]), `upcoming` ([{`at`, `kind`, `photo`, `minutes`, `why`}]: the next few changes the schedule makes on its own; `minutes` is how long until the change after it (null if none); `why` is sunrise, sunset, pin_ends, photo, photo_ends, redraw (the same screen drawn afresh) or schedule) |
 | GET | `/api/battery` | The last run on the battery from `battery.csv` (`cycle`: `started_at`, `ended_at`, `ongoing`, `used_mah`, `readings` [{`t`, `volts`, `milliamps`, `state`}], thinned to about 400), the time-left guess for an ongoing one (`estimate`: `avg_ma`, `percent`, `left_mah`, `hours_left`, `runs_out_at`, `hours_to_low`, `low_at`), the last five days for the chart (`history`: `from`, `to`, `step_s`, `readings` [{`t`, `volts`, `milliamps`, `state`}] averaged into 15-minute buckets, `spans` [{`state`, `start`, `end`}] of each state), `capacity_mah`, `indicator_volts`, `low_volts` and the tick's `power` state (`power.py`) |
 | GET | `/api/current.png` | The image on the wall (404 before the first refresh) |
 | GET | `/api/incoming.png` | The picture a refresh under way is bringing in (404 when none is; `refreshing.panel_at` in the status says one is) |
@@ -60,7 +60,7 @@ from typing import Any
 from flask import Flask, Response, redirect, request, send_file
 from werkzeug.exceptions import HTTPException
 
-from photopainter import hotspot, power, state
+from photopainter import hotspot, power, screens, state
 from photopainter.astro.moments import MOMENTS
 from photopainter.config import Config, ConfigError, edit_config, load_config, save_config, validate
 from photopainter.scenes.base import CLOUD_LOOKS, SCENE_KINDS, WAVE_LOOKS
@@ -370,6 +370,7 @@ def create_app(*, fake_panel: bool = False, clock: Callable[[], datetime] | None
         if dash.fake_hostname:
             sys_health["hostname"] = dash.fake_hostname
         srcs = health.sources(dash.dir, config, now)
+        gone = screens.missing(config)
         body = {
             **status,
             "server_time": now,
@@ -382,7 +383,8 @@ def create_app(*, fake_panel: bool = False, clock: Callable[[], datetime] | None
             "ticks": dash.ticks.snapshot(),
             "image": dash.image(),
             "config_error": config_error,
-            "screens": {k: find_spec(f"photopainter.scenes.{k}") is not None for k in SCENE_KINDS},
+            "screens": {k: find_spec(f"photopainter.scenes.{k}") is not None and k not in gone for k in SCENE_KINDS},
+            "screens_why": gone,
             "fake_panel": dash.fake_panel,
             "health": sys_health,
             "sources": srcs,
@@ -506,6 +508,9 @@ def create_app(*, fake_panel: bool = False, clock: Callable[[], datetime] | None
         config = dash.config()[0]
         now = dash.now(config)
         pin = None
+        gone = screens.missing(config)
+        if kind in gone:
+            raise ApiError(f"{gone[kind]}.")
         if kind != "auto":
             try:
                 until = resolve_until(body.get("until", "next_change"), now, config, dash.sun(config))
@@ -794,8 +799,8 @@ def upcoming_changes(dash: Dashboard, config: Config, now: datetime, overrides: 
     list. Empty when the sun times can't be worked out."""
     tz = config.location.tz
     queue, rotation = photo_queue(dash, config, overrides)
-    if not queue and not rotation:  # as the tick decides: nothing to show, no photo steps
-        config = replace(config, schedule=config.schedule.without_photos())
+    # As the tick decides: no photo steps with nothing to show, none for screens with no data here.
+    config = screens.schedule_here(config, photos=bool(queue or rotation))
     try:
         sun = dash.sun(config)
         here = decide(now, config, overrides, sun)
