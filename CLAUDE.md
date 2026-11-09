@@ -194,7 +194,8 @@ config.example.json # the default config (a test keeps it equal to default_confi
 tests/              # pytest, runs on the Mac with no hardware and no network
   fixtures/         #   recorded NOAA / Open-Meteo responses (noaa_*, openmeteo_*), and
                     #   tides/weather/surf/gauge.json: caches in PRD §5 format (real, 2026-11-03);
-                    #   horizons_altaz.json (JPL reference positions), stars_small.json
+                    #   horizons_altaz.json (JPL reference positions), stars_small.json,
+                    #   golden_wedge.json (hashes of the Wedge's screens, test_golden.py)
 scripts/
   flash-sd.sh       # Mac: flash + preconfigure an SD card (cloud-init, apt packages)
   fetch-ephemeris.sh # Mac: download de421.bsp once to ~/.cache/photopainter-dev/, link
@@ -383,6 +384,11 @@ anything off-palette was drawn. `render_scene` checks every screen's size and in
   `SSL_CERT_FILE=/etc/ssl/cert.pem` (the Pi's Debian Python uses the system store).
 - Use type hints and small modules. Write pytest tests for everything that doesn't need
   hardware, and fake the `hardware/` interfaces in tests.
+- `tests/test_golden.py` holds every approved screen to its pixels with the default config (the
+  Wedge): fifteen screens and moments, drawn from the fixture caches, each a hash of its ink
+  indices. A failure saves the new picture and names it. Re-record (`.venv/bin/python
+  tests/test_golden.py`) only for a change the Owner approved over previews, never in the same
+  commit as a refactor. The hashes depend on the Pillow and NumPy versions the file notes.
 - Copy upstream Waveshare code into `hardware/` with the upstream commit noted in the file
   header. Don't use a git submodule, and don't modify copied files beyond what's needed.
 

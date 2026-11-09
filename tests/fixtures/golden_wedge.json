@@ -1,0 +1,24 @@
+{
+  "note": "sha256 of each screen's ink indices for the default config; tests/test_golden.py",
+  "versions": {
+    "pillow": "13.0.0",
+    "numpy": "2.5.4"
+  },
+  "screens": {
+    "combo afternoon": "c15454be773de6e2300324ca4ceb2037877f29f63dcfef92c50b0a5c878e42ea",
+    "combo night": "1147efd956d95bad06aeafdf1bee2a494a8070084f6135323f1bd8c210040b68",
+    "harbor afternoon": "ecefb37ce6c414729a03ff49d58893440f914766391c7e317d034d25f74d23af",
+    "harbor night": "029421b6cff1d0edecc4f88591323d7cc27f001341cc66a9d50e6034ca48f5e8",
+    "sea afternoon": "c6e1eda0f6117d16ff05e10be22faae88a179db5538f1e15f833859c5aa8b781",
+    "sea big swell look": "6832f550e08ad444c49f56d480926e86812737180b25dfb62af275bc279d3dc8",
+    "sea night": "04b54269bae31c8c2efe1a284ee647238cc950bd8b708a70e54947a40752ad24",
+    "sky day": "163ac323281e3003f687519e77dd56b78cfc5be67bb8ed9fcc9232975d9ef84e",
+    "sky lunar eclipse": "0475dc152f0eaf28306ea8d1381d64f5c7ef16d924a9e996329006f8d85aed7a",
+    "sky night": "e27fee5d84a2270e53c150d5c6377b1b0e4b75fd20582259e143a3ad5e2e1a27",
+    "sky summer night": "0bd4f17c2892bc5946ef290a1f4d2d96e1221a27828f001e02308f59551fb44b",
+    "sky twilight": "d3db4782c581ddb2d9803f1002f509c09f78e96fef86050aa04413359a8b8099",
+    "tides afternoon": "b091ac50ff43dce1fe62be3d60443a95256f19740ca5daa24df6e1398b1fd3aa",
+    "tides night": "7f8a3fa0fac825076a69479147a9b8e2a8850db4f53e92538ad23b185b0bd444",
+    "tides stale weather": "815d0eba2aa1b0e1b4cdb5d9292092a287df57d17ece313d244c765a9c426f26"
+  }
+}
