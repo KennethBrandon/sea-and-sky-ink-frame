@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 
 from photopainter import config as config_module
-from photopainter import schedule
+from photopainter import places, schedule
 from photopainter.config import default_config
 from photopainter.render.draw import INK
 from photopainter.scenes import SCENE_KINDS, Scene, SceneContext, render_scene
@@ -43,9 +43,22 @@ def caches(folder, at, *, swell=2.0, period=13.0, swell_dir=225, wind=4.0, wind_
     return folder
 
 
-def draw(folder, at=AFTERNOON):
-    ctx = SceneContext.from_config(default_config(), state_dir=folder)
+def draw(folder, at=AFTERNOON, config=None):
+    ctx = SceneContext.from_config(config or default_config(), state_dir=folder)
     return render_scene(Scene("sea", "sea/x", at), ctx)
+
+
+def wedge_jetty():
+    loc = default_config().location
+    return places.sea_for(loc.lat, loc.lon, 190.0, ROOT / "data").jetty
+
+
+def moved(lat=None, lon=None, window=None):
+    """The default config somewhere else, or with the window turned."""
+    c = default_config()
+    loc = replace(c.location, lat=c.location.lat if lat is None else lat, lon=c.location.lon if lon is None else lon)
+    sky = replace(c.sky, center_azimuth_deg=c.sky.center_azimuth_deg if window is None else window)
+    return replace(c, location=loc, sky=sky)
 
 
 def sea_white(pixels):
@@ -187,14 +200,14 @@ def test_the_playground_draws_with_any_setting():
 def test_no_waves_or_beach_left_of_the_jetty(tmp_path, at):
     caches(tmp_path, at, swell=8.0, wind=35.0)
     pixels = draw(tmp_path, at)
-    below_the_tip = sea._calm_mask((800, 480))
+    below_the_tip = sea._calm_mask((800, 480), wedge_jetty())
     below_the_tip[:, 25:] = False  # clear of the rocks, which wander a little
     assert (pixels[below_the_tip] == (INK["blue"] if at == AFTERNOON else INK["black"])).all()
 
 
 def test_the_jetty_reaches_out_to_the_tip():
     c = sea.InkCanvas((800, 480), "blue")
-    sea._jetty(c, sea.DAY_LOOK)
+    sea._jetty(c, wedge_jetty(), sea.DAY_LOOK)
     black = c.indices() == INK["black"]
     assert black[215:225, 40:60].mean() > 0.3  # near the tip
     assert black[470:480, 120:135].mean() > 0.3  # at the bottom
@@ -296,3 +309,28 @@ def test_the_time_sets_the_light_and_the_dark_look(tmp_path):
     assert day.daylight and not night.daylight
     assert day.light.phase is None
     assert night.light is None or night.light.phase is not None
+
+
+def test_the_jetty_is_the_wedges_and_stays_there(tmp_path):
+    """The jetty and its calm water come from the place's data: within 2 km of where they were
+    drawn, with the window within 45° of the way it faced (places.sea_for)."""
+    caches(tmp_path, AFTERNOON, swell=8.0, wind=35.0)
+    calm = sea._calm_mask((800, 480), wedge_jetty())
+    calm[:, 25:] = False
+    here = draw(tmp_path)
+    assert (here[calm] == INK["blue"]).all()
+    for config in (moved(lat=33.2), moved(window=100.0)):  # 44 km south; a window facing east
+        elsewhere = draw(tmp_path, config=config)
+        assert not (elsewhere[calm] == INK["blue"]).all()  # waves and sand where the calm water was
+        assert not (elsewhere[300:480, 30:180] == INK["black"]).mean() > 0.3  # no boulders
+    assert places.sea_for(33.593, -117.882, 190.0 + 44, ROOT / "data") is not None
+    assert places.sea_for(33.593, -117.882, 190.0 + 46, ROOT / "data") is None
+
+
+def test_with_no_place_the_beach_follows_the_stations_own_range():
+    place = places.SeaPlace(None, (0.0, 7.0))
+    assert sea.beach_span(place, np.array([1.0, 2.0])) == (0.0, 7.0)
+    assert sea.beach_span(None, np.array([-1.5, 2.0, 11.0])) == (-1.5, 11.0)
+    assert sea.beach_span(None, np.array([0.2, 0.4])) == (0.2, 1.2)  # never a range under 1 ft
+    assert sea.beach_px(-1.5, (-1.5, 11.0)) == 60 and sea.beach_px(11.0, (-1.5, 11.0)) == 26
+    assert sea.beach_px(3.5) == sea.beach_px(3.5, (0.0, 7.0))

@@ -36,6 +36,7 @@ from datetime import datetime, timedelta
 
 import numpy as np
 
+from photopainter import places
 from photopainter.render.draw import INK, InkCanvas, font, text_width
 from photopainter.scenes import harbor as chart
 from photopainter.scenes import sea, sky, tides
@@ -176,10 +177,10 @@ SOUNDING_SIZE = 9
 WIND_SCALE = 0.7  # the map is half the size, but an arrow half as long would be hard to read
 
 
-def harbor_view(ctx: SceneContext, bounds: dict[str, float]) -> chart.View:
+def harbor_view(ctx: SceneContext, data: dict) -> chart.View:
     """The full chart's north and south in this panel's height, keeping the map's shape, so
     the middle of its width shows."""
-    full = chart.make_view(ctx.config.harbor, bounds)
+    full = chart.make_view(ctx.config.harbor, data["bounds"], chart.place_view(data))
     lat_per_px = (full.top - full.south) / PANEL[1]
     lon_per_px = lat_per_px * full.deg_per_px_lon / full.deg_per_px_lat
     center = full.west + chart.W * full.deg_per_px_lon / 2
@@ -192,18 +193,18 @@ def harbor_panel(m: tides.DayModel, ctx: SceneContext) -> np.ndarray:
     are left out: the tide panel beside it has them. Its helpers draw on the full chart's
     canvas, so this draws there and keeps the top left corner."""
     width, height = PANEL
-    data = chart.load_harbor(ctx.data_dir)
-    view = harbor_view(ctx, data["bounds"])
+    data = chart.harbor_data(ctx)
+    view = harbor_view(ctx, data)
     c = InkCanvas((chart.W, chart.H), "white")
     the_map = chart.draw_map(c, data, view, chart.tide_now(m))
     outside: list[chart.Rect] = [(-99.0, -99.0, 0.0, chart.H), (0.0, -99.0, chart.W, 0.0),
                                  (width, 0.0, chart.W, chart.H), (0.0, height, chart.W, chart.H)]
-    title_at = (width - 8, 12)
-    taken = outside + [chart.label_rect(title_at, "NEWPORT BAY", 13, "ra", True)] + chart.draw_marks(c, data, view)
+    title_at, title = (width - 8, 12), chart.title(data)
+    taken = outside + [chart.label_rect(title_at, title, 13, "ra", True)] + chart.draw_marks(c, data, view)
     taken += chart.draw_names(c, data, view, taken)
     chart.draw_on_water(c, m, data, view, the_map, taken, ((60, height - 44), (200, height - 44)),
                         swell_size=SWELL_SIZE, sounding_size=SOUNDING_SIZE, wind_scale=WIND_SCALE)
-    chart.label(c, title_at, "NEWPORT BAY", 13, bold=True, anchor="ra", halo=WHITE)
+    chart.label(c, title_at, title, 13, bold=True, anchor="ra", halo=WHITE)
     return np.asarray(c.image, dtype=np.uint8)[:height, :width].copy()
 
 
@@ -224,7 +225,9 @@ def sea_panel(at: datetime, ctx: SceneContext) -> np.ndarray:
     m = sea.sea_model(at, ctx)
     m = replace(m, words=(None, m.words[1], _no_tide(m.words[2])), updated=None)
     c = InkCanvas(PANEL, "white")
-    sea.draw(c, m, ctx.config.sky.center_azimuth_deg, sky.load_skyline(ctx.data_dir), scale=0.5, words=SEA_WORDS)
+    loc, place = ctx.config.location, sea.place_for(ctx)
+    sea.draw(c, m, ctx.config.sky.center_azimuth_deg, places.skyline_for(loc.lat, loc.lon, ctx.data_dir), scale=0.5,
+             words=SEA_WORDS, jetty=None if place is None else place.jetty)
     return c.indices()
 
 

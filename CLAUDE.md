@@ -106,6 +106,9 @@ src/photopainter/
   buttons.py        # `photopainter buttons`: presses into actions (Decoder); forward and back
                     #   through the schedule or, in photos only, the photos; its own service,
                     #   since low power stops the dashboard
+  places.py         # place data (PRD §9): skyline, harbor chart, jetty, matched by location from
+                    #   ~/.config/photopainter/places/ then data/places/; none = open horizon,
+                    #   no jetty, no harbor chart
   hotspot.py        # no Wi-Fi: whether the frame is on it (link_up), when the mark is due, the
                     #   setup hotspot's steps (advance -> Outcome), Nmcli on the Pi, FakeNetwork
   astro/            # Skyfield, loaded lazily; ephemeris = data/de421.bsp, no downloads
@@ -188,8 +191,9 @@ src/photopainter/
                     #   data credit and software license; data/README.md)
 data/               # fonts/ (DejaVu Sans + license), README.md (sources and licenses),
                     #   de421.bsp (gitignored link, from scripts/fetch-ephemeris.sh),
-                    #   stars.json, constellations.json, milkyway.png, skyline.json (sky),
-                    #   harbor.json (the harbor chart's map and soundings)
+                    #   stars.json, constellations.json, milkyway.png (sky); places/wedge/: the
+                    #   Wedge's skyline.json, harbor.json (the chart's map and soundings) and
+                    #   place.json (names, the jetty: choices made by hand), see places.py
 config.example.json # the default config (a test keeps it equal to default_config())
 tests/              # pytest, runs on the Mac with no hardware and no network
   fixtures/         #   recorded NOAA / Open-Meteo responses (noaa_*, openmeteo_*), and
@@ -202,9 +206,9 @@ scripts/
                     #   it into data/ (run once per checkout or worktree)
   build-star-data.py # Mac: rebuild stars.json, constellations.json, milkyway.png from
                     #   pinned HYG / Stellarium / ESO files (only to change sources)
-  build-skyline.py  # Mac: rebuild skyline.json (Catalina from the Wedge) from DEM data
+  build-skyline.py  # Mac: rebuild places/wedge/skyline.json (Catalina from the Wedge) from DEM data
   sea-playground.py # Mac: try the sea screen's look live, a slider for every SeaStyle number
-  build-harbor.py   # Mac: rebuild harbor.json from an Overpass response and NOAA ENC soundings
+  build-harbor.py   # Mac: rebuild places/wedge/harbor.json from an Overpass response and NOAA ENC soundings
                     #   (saved files, or --fetch)
   analyze-card.py   # Mac: measure the inks from photos of the color test card
   build-readme-images.py # Mac: redraw README.md's pictures (docs/images/) with the frame's own code,
@@ -540,7 +544,7 @@ These are enforced in `hardware/panel.py`; keep them that way.
   its rim and the Sun and Moon at their azimuths now, a scale bar and lat/lon ticks. It isn't in
   the default rotation: add it on the dashboard, or pin it. Choices since the mockup, all the
   Owner's (2026-11-04): the map's bounds are settings (`harbor.south`, `north`, `center_lon`,
-  for the map above the band; the width follows; `data/harbor.json` covers 33.54-33.70 N, 118.02-117.78 W and a view past
+  for the map above the band; the width follows; the Wedge's `data/places/wedge/harbor.json` covers 33.54-33.70 N, 118.02-117.78 W and a view past
   that is fitted back inside), with the default south edge lowered so the NWP safe-water buoy
   shows bottom right; the tide in a band along the bottom (chosen over a box in the title block and one over the
   ocean, from previews), by default 24 h back to 4 days ahead: the day screen's `tide_chart` at a

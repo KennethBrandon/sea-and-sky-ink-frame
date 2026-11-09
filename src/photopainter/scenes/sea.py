@@ -32,8 +32,12 @@ What each number does:
   behind the sea, and it isn't drawn when it's outside the picture's span of
   `center ± HALF_SPAN_DEG` or the sky is overcast. Above about 47° it stays at the top edge.
 
-- **Jetty:** fixed, running out from the bottom left. Left of it is the harbor mouth: flat
-  water with no waves and no beach, whatever the swell.
+- **Jetty:** from the place's data (`places.sea_for`): the Wedge's runs out from the bottom
+  left, where the Owner drew it. Left of it is the harbor mouth: flat water with no waves and
+  no beach, whatever the swell. Without place data there's no jetty, and the island on the
+  horizon is the place's skyline (none: an open horizon).
+- **Beach:** its width follows the tide between the place's low and high (the Wedge: 0 to
+  7 ft), or the station's own range in the tide cache without place data.
 
 With the Sun below the horizon the same drawing goes dark (`Look`): a black sky, the Moon
 in its phase, the lit faces as blue dots on black. On a moonless or
@@ -64,10 +68,12 @@ from functools import lru_cache
 import numpy as np
 from PIL import Image, ImageDraw
 
+from photopainter import places
 from photopainter.astro.moon import MoonPhase
+from photopainter.places import Jetty, SeaPlace
 from photopainter.render.draw import INK, InkCanvas, font, text_width
 from photopainter.scenes.base import Scene, SceneContext
-from photopainter.scenes.sky import Skyline, clock, load_skyline, phase_disc
+from photopainter.scenes.sky import Skyline, clock, phase_disc
 from photopainter.scenes.tides import compass, condition, day_model, deg, flow_arrow, whole
 
 BLACK, WHITE, YELLOW, BLUE = INK["black"], INK["white"], INK["yellow"], INK["blue"]
@@ -77,7 +83,7 @@ ARROW_GAP_PX = 5
 HALF_SPAN_DEG = 55.0  # the picture spans this far either side of the window's bearing
 SKY_PX_PER_DEG = 3.0  # how high the Sun and Moon stand above the horizon
 ISLAND_PX_PER_DEG = 11.0
-ISLAND_EXAGGERATION = 4.0  # as the sky screen draws Catalina
+ISLAND_EXAGGERATION = 4.0  # as the sky screen draws land on the horizon
 DISC_RADIUS = 17
 DEFAULT_PERIOD_S = 10.0  # when the cache has no period
 WHITECAP_ROWS = 8  # whitecaps_in_row() counts dashes for a sea of this many rows
@@ -90,9 +96,10 @@ PARTLY_CODES = (2,)
 Cloud = tuple[float, float, float, float]  # center x, center y, radius x, radius y
 
 
-# The jetty on the canvas, drawn by the Owner over a preview: its edges from the tip to the bottom.
-JETTY_LEFT = ((32, 207), (35, 257), (52, 322), (77, 402), (105, 467), (115, 480))
-JETTY_RIGHT = ((57, 207), (105, 307), (132, 382), (160, 422), (172, 472), (176, 480))
+# A jetty and the beach's tide range come from the place's data (places.sea_for): the Wedge's
+# jetty was drawn on the picture by the Owner over a preview.
+BEACH_SPAN_FT = (0.0, 7.0)  # the beach's widest and narrowest tides when nothing says otherwise
+MIN_BEACH_SPAN_FT = 1.0
 
 
 @dataclass(frozen=True)
@@ -237,11 +244,29 @@ def whitecaps_in_row(wind_mph: float, s: float, style: SeaStyle = SeaStyle()) ->
     return int((style.whitecap_base + extra * style.whitecap_per_mph) * (0.35 + s))
 
 
-def beach_px(tide_ft: float | None) -> int:
-    """How much sand shows: about 60 px at a zero tide, 26 at a 7 ft high."""
+def beach_px(tide_ft: float | None, span: tuple[float, float] = BEACH_SPAN_FT) -> int:
+    """How much sand shows: about 60 px at the low end of `span`, 26 at its high end."""
     if tide_ft is None:
         return BEACH_DEFAULT_PX
-    return round(min(max(60 - tide_ft * 34 / 7, 22.0), 68.0))
+    low, high = span
+    return round(min(max(60 - (tide_ft - low) * 34 / (high - low), 22.0), 68.0))
+
+
+def place_for(ctx: SceneContext) -> SeaPlace | None:
+    """The jetty and beach for this window, from the place's data (places.sea_for)."""
+    loc = ctx.config.location
+    return places.sea_for(loc.lat, loc.lon, ctx.config.sky.center_azimuth_deg, ctx.data_dir)
+
+
+def beach_span(place: SeaPlace | None, heights: np.ndarray | None) -> tuple[float, float]:
+    """The tides the beach's width runs between: the place's, else the station's own range in
+    the tide cache."""
+    if place is not None and place.beach_ft is not None:
+        return place.beach_ft
+    if heights is None or len(heights) == 0:
+        return BEACH_SPAN_FT
+    low, high = float(np.min(heights)), float(np.max(heights))
+    return low, max(high, low + MIN_BEACH_SPAN_FT)
 
 
 def sky_kind(code: int | None) -> str:
@@ -325,7 +350,7 @@ def sea_model(now: datetime, ctx: SceneContext, updated: datetime | None = None,
         period_s=period_s,
         swell_from=swell_from,
         wind_mph=0.0 if wind_mph is None else wind_mph,
-        beach_px=beach_px(tide_ft),
+        beach_px=beach_px(tide_ft, beach_span(place_for(ctx), None if tide is None else tide.heights)),
         words=("  ·  ".join(first), second, "  ·  ".join(third) or None),
         wind_from=wind_from,
         updated=f"Updated {clock(updated or now)}",
@@ -437,9 +462,11 @@ def _words(c: InkCanvas, m: SeaModel, look: Look, words: WordStyle = WordStyle()
 
 
 def draw(c: InkCanvas, m: SeaModel, center_az: float, skyline: Skyline | None,
-         style: SeaStyle = SeaStyle(), scale: float = 1.0, words: WordStyle = WordStyle()) -> None:
+         style: SeaStyle = SeaStyle(), scale: float = 1.0, words: WordStyle = WordStyle(),
+         jetty: Jetty | None = None) -> None:
     """The picture on `c`. `scale` draws it smaller (the combo screen's panel: 0.5 on a canvas
-    half the size); 1.0 is the screen as approved."""
+    half the size); 1.0 is the screen as approved. `skyline` and `jetty` are the place's
+    (`places.skyline_for`, `place_for`); None leaves them out."""
     width, height = c.size
     look = DAY_LOOK if m.daylight else NIGHT_LOOK
     style = style.scaled(scale) if scale != 1.0 else style
@@ -461,8 +488,9 @@ def draw(c: InkCanvas, m: SeaModel, center_az: float, skyline: Skyline | None,
     sea_bottom = height - round(m.beach_px * scale)
     _sea(c, m, look, horizon, sea_bottom, center_az, m.daylight or light is not None, style, scale)
     _beach(c, look, sea_bottom, scale)
-    _calm(c, look, scale)
-    _jetty(c, look, scale)
+    if jetty is not None:
+        _calm(c, jetty, look, scale)
+        _jetty(c, jetty, look, scale)
 
     _words(c, m, look, words)
 
@@ -577,29 +605,29 @@ def _beach(c: InkCanvas, look: Look, sea_bottom: int, scale: float = 1.0) -> Non
     c.draw.line([(x, y + 6 * scale) for x, y in wash], fill=look.wash_key, width=1)
 
 
-def _jetty_edges(scale: float) -> tuple[tuple[tuple[float, float], ...], tuple[tuple[float, float], ...]]:
+def _jetty_edges(jetty: Jetty, scale: float) -> tuple[tuple[tuple[float, float], ...], tuple[tuple[float, float], ...]]:
     """The jetty's left and right edges, at this size."""
-    return (tuple((x * scale, y * scale) for x, y in JETTY_LEFT), tuple((x * scale, y * scale) for x, y in JETTY_RIGHT))
+    return (tuple((x * scale, y * scale) for x, y in jetty.left), tuple((x * scale, y * scale) for x, y in jetty.right))
 
 
-def _calm_mask(size: tuple[int, int], scale: float = 1.0) -> np.ndarray:
+def _calm_mask(size: tuple[int, int], jetty: Jetty, scale: float = 1.0) -> np.ndarray:
     """The sheltered water left of the jetty, running under the rocks so no wave shows between."""
-    left = _jetty_edges(scale)[0]
+    left = _jetty_edges(jetty, scale)[0]
     return _poly_mask(size, [(0, left[0][1]), *((x + 5 * scale, y) for x, y in left), (0, left[-1][1])])
 
 
-def _calm(c: InkCanvas, look: Look, scale: float = 1.0) -> None:
+def _calm(c: InkCanvas, jetty: Jetty, look: Look, scale: float = 1.0) -> None:
     """The harbor mouth behind the jetty: flat water, no waves and no beach."""
-    _paste(c, _calm_mask(c.size, scale), look.trough)
+    _paste(c, _calm_mask(c.size, jetty, scale), look.trough)
 
 
 def _edge_x(edge: tuple[tuple[float, float], ...], y: float) -> float:
     return float(np.interp(y, [p[1] for p in edge], [p[0] for p in edge]))
 
 
-def _jetty(c: InkCanvas, look: Look, scale: float = 1.0) -> None:
-    """The Wedge's jetty running out from the bottom left, its boulders smaller toward the tip."""
-    left, right = _jetty_edges(scale)
+def _jetty(c: InkCanvas, jetty: Jetty, look: Look, scale: float = 1.0) -> None:
+    """The jetty running out from the bottom of the picture, its boulders smaller toward the tip."""
+    left, right = _jetty_edges(jetty, scale)
     top, bottom = left[0][1], left[-1][1]
     rng = np.random.default_rng(21)
 
@@ -630,5 +658,7 @@ def _jetty(c: InkCanvas, look: Look, scale: float = 1.0) -> None:
 def render(scene: Scene, ctx: SceneContext) -> np.ndarray:
     m = sea_model(scene.draw_for, ctx, scene.updated, scene.waves, scene.clouds)
     c = InkCanvas(ctx.canvas, "white")
-    draw(c, m, ctx.config.sky.center_azimuth_deg, load_skyline(ctx.data_dir))
+    loc, place = ctx.config.location, place_for(ctx)
+    draw(c, m, ctx.config.sky.center_azimuth_deg, places.skyline_for(loc.lat, loc.lon, ctx.data_dir),
+         jetty=None if place is None else place.jetty)
     return c.indices()

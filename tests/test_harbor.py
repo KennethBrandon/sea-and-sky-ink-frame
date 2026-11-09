@@ -12,7 +12,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 import pytest
 
-from photopainter import schedule, state
+from photopainter import places, schedule, state
 from photopainter.config import SCREEN_KINDS, ConfigError, Config, Harbor, validate
 from photopainter.render.draw import INK, InkCanvas
 from photopainter.scenes import Scene, SceneContext, render_scene
@@ -23,6 +23,11 @@ ROOT = Path(__file__).parent.parent
 FIXTURES = Path(__file__).parent / "fixtures"
 TZ = ZoneInfo("America/Los_Angeles")
 AT = datetime(2026, 11, 3, 14, 10, tzinfo=TZ)
+
+
+def wedge_harbor():
+    """The Wedge's harbor chart, as the screen finds it (places.harbor_for)."""
+    return places.harbor_for(33.593, -117.882, ROOT / "data")
 
 
 def _render(state_dir: Path = FIXTURES, at: datetime = AT, **settings) -> np.ndarray:
@@ -96,7 +101,7 @@ def test_other_bounds_move_the_map():
 
 
 def test_default_view_shows_the_buoy_clear_of_the_edge():
-    data = harbor.load_harbor(ROOT / "data")
+    data = wedge_harbor()
     view = harbor.make_view(Harbor(), data["bounds"])
     buoy = next(m for m in data["marks"] if m["kind"] == "safe_water")
     x, y = view.xy(buoy["lat"], buoy["lon"])
@@ -128,7 +133,7 @@ def test_view_past_the_data_is_fitted_inside_it():
 
 
 def test_data_file():
-    path = ROOT / "data" / "harbor.json"
+    path = ROOT / "data" / "places" / "wedge" / "harbor.json"
     assert path.stat().st_size < 300 * 1024
     data = json.loads(path.read_text())
     assert "OpenStreetMap" in data["license"]
@@ -271,14 +276,14 @@ def _model(**weather):
 
 
 def _chart():
-    data = harbor.load_harbor(ROOT / "data")
+    data = wedge_harbor()
     view = harbor.make_view(Harbor(), data["bounds"])
     return data, view, harbor.draw_map(InkCanvas((800, 480)), data, view, None)
 
 
 def _draw(m):
     c = InkCanvas((800, 480), "white")
-    harbor.draw_all(c, m, harbor.load_harbor(ROOT / "data"), Harbor())
+    harbor.draw_all(c, m, wedge_harbor(), Harbor())
     return c.indices()
 
 

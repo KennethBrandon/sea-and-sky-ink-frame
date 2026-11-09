@@ -1,0 +1,176 @@
+{
+  "name": "The Wedge, Newport Beach, California",
+  "note": "Hand-made choices for this place (src/photopainter/places.py). skyline.json and harbor.json beside it are built by scripts and never edited by hand.",
+  "skyline": {
+    "label": "CATALINA"
+  },
+  "harbor": {
+    "title": "NEWPORT BAY",
+    "view": {
+      "south": 33.5835,
+      "north": 33.61575,
+      "center_lon": -117.9015
+    },
+    "place_names": [
+      {
+        "name": "BALBOA PENINSULA",
+        "lat": 33.6021,
+        "lon": -117.9135,
+        "size": 12,
+        "bold": true,
+        "angle": 27.0,
+        "ink": "black"
+      },
+      {
+        "name": "CORONA DEL MAR",
+        "lat": 33.5992,
+        "lon": -117.869,
+        "size": 11,
+        "bold": true,
+        "angle": 0.0,
+        "ink": "black"
+      },
+      {
+        "name": "NEWPORT BEACH",
+        "lat": 33.6205,
+        "lon": -117.9155,
+        "size": 11,
+        "bold": true,
+        "angle": 0.0,
+        "ink": "black"
+      },
+      {
+        "name": "PACIFIC  OCEAN",
+        "lat": 33.5975,
+        "lon": -117.9103,
+        "size": 16,
+        "bold": true,
+        "angle": 0.0,
+        "ink": "blue"
+      }
+    ],
+    "landmarks": [
+      {
+        "name": "The Wedge",
+        "lat": 33.5925,
+        "lon": -117.8788,
+        "dx": -4,
+        "dy": 10,
+        "anchor": "rm",
+        "bold": true
+      },
+      {
+        "name": "Newport Pier",
+        "lat": 33.6058,
+        "lon": -117.9302,
+        "dx": 2,
+        "dy": 12,
+        "anchor": "lm",
+        "bold": false
+      },
+      {
+        "name": "Balboa Pier",
+        "lat": 33.5983,
+        "lon": -117.9006,
+        "dx": 4,
+        "dy": 2,
+        "anchor": "lm",
+        "bold": false
+      }
+    ],
+    "island_nudge": {
+      "Bay Is.": [
+        -14,
+        -9
+      ],
+      "Newport Is.": [
+        0,
+        10
+      ],
+      "Little Balboa": [
+        8,
+        6
+      ]
+    },
+    "island_lines": {
+      "Little Balboa": [
+        "Little",
+        "Balboa"
+      ]
+    },
+    "bold_islands": [
+      "Lido Isle",
+      "Balboa Island"
+    ],
+    "big_piers": [
+      "Newport Pier",
+      "Balboa Pier"
+    ],
+    "marsh_full_ft": 5.5
+  },
+  "sea": {
+    "observer": {
+      "lat": 33.593,
+      "lon": -117.882
+    },
+    "bearing_deg": 190.0,
+    "jetty": {
+      "left": [
+        [
+          32,
+          207
+        ],
+        [
+          35,
+          257
+        ],
+        [
+          52,
+          322
+        ],
+        [
+          77,
+          402
+        ],
+        [
+          105,
+          467
+        ],
+        [
+          115,
+          480
+        ]
+      ],
+      "right": [
+        [
+          57,
+          207
+        ],
+        [
+          105,
+          307
+        ],
+        [
+          132,
+          382
+        ],
+        [
+          160,
+          422
+        ],
+        [
+          172,
+          472
+        ],
+        [
+          176,
+          480
+        ]
+      ]
+    },
+    "beach_ft": [
+      0.0,
+      7.0
+    ]
+  }
+}

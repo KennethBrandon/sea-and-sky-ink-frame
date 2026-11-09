@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 import numpy as np
 import pytest
 
+from photopainter import places
 from photopainter.config import SCREEN_KINDS, default_config, validate
 from photopainter.render.draw import INK, InkCanvas
 from photopainter.schedule import PIN_KINDS
@@ -110,9 +111,9 @@ def test_the_harbor_panel_has_two_swell_arrows_and_a_smaller_field_of_wind(monke
 def test_the_harbor_panel_follows_the_harbor_settings_view():
     config = default_config()
     moved = validate({"harbor": {"center_lon": -117.93}})
-    bounds = combo.chart.load_harbor(ROOT / "data")["bounds"]
-    here = combo.harbor_view(SceneContext.from_config(config, state_dir=FIXTURES), bounds)
-    there = combo.harbor_view(SceneContext.from_config(moved, state_dir=FIXTURES), bounds)
+    data = combo.chart.harbor_data(SceneContext.from_config(config, state_dir=FIXTURES))
+    here = combo.harbor_view(SceneContext.from_config(config, state_dir=FIXTURES), data)
+    there = combo.harbor_view(SceneContext.from_config(moved, state_dir=FIXTURES), data)
     assert there.west < here.west
     assert here.height == combo.PANEL[1] and here.south == config.harbor.south
 
@@ -137,8 +138,9 @@ def test_the_sea_at_half_size_is_the_same_drawing_at_half_size():
     model = sea.SeaModel(seed=1, daylight=True, sky="clear", light=None, swell_ft=3.0, period_s=11.0, swell_from=190.0,
                          wind_mph=9.0, beach_px=40, words=(None, None, None), wind_from=270.0)
     big, small = InkCanvas((800, 480), "white"), InkCanvas((400, 240), "white")
-    sea.draw(big, model, 190.0, None)
-    sea.draw(small, model, 190.0, None, scale=0.5)
+    jetty = places.sea_for(33.593, -117.882, 190.0, ROOT / "data").jetty  # the Wedge's
+    sea.draw(big, model, 190.0, None, jetty=jetty)
+    sea.draw(small, model, 190.0, None, scale=0.5, jetty=jetty)
     big, small = big.indices(), small.indices()
     # The jetty is black, in the same place and just as big, and so is the beach's top edge.
     assert abs((big == INK["black"]).mean() - (small == INK["black"]).mean()) < 0.03

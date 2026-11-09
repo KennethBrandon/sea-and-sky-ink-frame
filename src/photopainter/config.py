@@ -218,9 +218,10 @@ class Photos:
 @dataclass(frozen=True)
 class Harbor:
     """The harbor chart (`scenes/harbor.py`): what the map above the tide band shows. Its
-    width follows from its shape; a view past what `data/harbor.json` covers is fitted back inside it."""
+    width follows from its shape; a view past what the place's chart covers is fitted back
+    inside it, and one that misses it altogether takes the place's own view (places.py)."""
 
-    south: float = 33.5835  # low enough to keep the safe-water buoy on the map
+    south: float = 33.5835  # the Wedge's: low enough to keep the safe-water buoy on the map
     north: float = 33.61575
     center_lon: float = -117.9015
     chart_days_behind: float = 1.0  # the tide band: its own span and labels, apart from the day screen's
@@ -510,9 +511,9 @@ def validate(data: dict) -> Config:
                                                      "chart_days_ahead", "label_tides", "label_times", "label_heights"))
     behind, ahead = _chart_span(c, s, "harbor", d.harbor.chart_days_behind, d.harbor.chart_days_ahead)
     harbor = Harbor(
-        south=c.number(s, "harbor", "south", d.harbor.south, 33.54, 33.70),
-        north=c.number(s, "harbor", "north", d.harbor.north, 33.54, 33.70),
-        center_lon=c.number(s, "harbor", "center_lon", d.harbor.center_lon, -118.02, -117.78),
+        south=c.number(s, "harbor", "south", d.harbor.south, -90, 90),
+        north=c.number(s, "harbor", "north", d.harbor.north, -90, 90),
+        center_lon=c.number(s, "harbor", "center_lon", d.harbor.center_lon, -180, 180),
         chart_days_behind=behind,
         chart_days_ahead=ahead,
         label_tides=c.choice(s, "harbor", "label_tides", d.harbor.label_tides, TIDE_LABELS),

@@ -17,11 +17,11 @@ import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qsl, urlparse
 
-from photopainter import state
+from photopainter import places, state
+from photopainter.config import default_config
 from photopainter.astro.moon import MoonPhase
 from photopainter.render.draw import InkCanvas
 from photopainter.scenes import sea
-from photopainter.scenes.sky import load_skyline
 from photopainter.scenes.tides import compass
 
 # name, label, min, max, step, default
@@ -83,7 +83,10 @@ def render_png(params: dict[str, str]) -> bytes:
                f"Wind {wind} mph {compass(day['wind_from'])}{sea.ARROW}  ·  Water 62°  ·  High tide 3:42 pm"),
         wind_from=day["wind_from"], updated="Updated 2:10 pm")
     canvas = InkCanvas((800, 480), "white")
-    sea.draw(canvas, model, 190.0, load_skyline(state.data_dir()), style)
+    loc = default_config().location  # the Wedge: its island and jetty
+    place = places.sea_for(loc.lat, loc.lon, 190.0, state.data_dir())
+    sea.draw(canvas, model, 190.0, places.skyline_for(loc.lat, loc.lon, state.data_dir()), style,
+             jetty=None if place is None else place.jetty)
     out = io.BytesIO()
     canvas.preview().save(out, "PNG")
     return out.getvalue()

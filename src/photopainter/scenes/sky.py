@@ -123,7 +123,9 @@ from photopainter.astro.sky import (
     load_stars, offset, sky_view, sun_altaz,
 )
 from photopainter.astro.sun import sun_events
+from photopainter import places
 from photopainter.config import Config
+from photopainter.places import Skyline, load_skyline  # noqa: F401 - the sea screen imports them from here
 from photopainter.render.draw import INK, InkCanvas, font, text_width
 from photopainter.scenes.base import Scene, SceneContext
 from photopainter.scenes.tides import (
@@ -184,7 +186,7 @@ class SkyStyle:
     mw_gamma: float = 1.4  # >1 keeps faint parts sparse, so the bright core and dark lanes stand out
     mw_density: float = 0.40  # fraction of pixels dotted at full coverage
     moon_path: bool = True  # the Moon's reflection on the water when it's up
-    island: bool = True  # Catalina on the horizon (data/skyline.json)
+    island: bool = True  # land on the horizon, from the place's skyline (places.py)
     island_exaggeration: float = 4.0  # it's half a degree tall; drawn this many times taller
     island_fill: int = WHITE  # grey: half the pixels white, in ordered dots (Owner, on the panel)
     island_base: int = BLACK  # what island_fill's dots are on
@@ -295,7 +297,7 @@ class SkyModel:
     constellations: tuple[Constellation, ...]
     moon_next: tuple[str, datetime] | None  # ("rises" | "sets", when), the next one within a day
     milky_way: np.ndarray | None = None  # data/milkyway.png, if it's there
-    skyline: Skyline | None = None  # Catalina, when seen from about where it was computed
+    skyline: Skyline | None = None  # land on the horizon, from the place's data (places.py)
     sun_next: tuple[str, datetime] | None = None  # ("rises" | "sets", when)
     sun_track: tuple[tuple[datetime, float, float], ...] = ()  # today's (time, alt, az) every 10 min; lit only
     weather: Weather | None = None  # the day screen's weather, when the cache is fresh enough
@@ -307,9 +309,7 @@ def sky_model(now: datetime, ctx: SceneContext) -> SkyModel:
     now = now.astimezone(loc.tz)
     catalog = load_stars(ctx.data_dir)
     view = sky_view(now, loc.lat, loc.lon, catalog)
-    skyline = load_skyline(ctx.data_dir)
-    if skyline is not None and _km_between((loc.lat, loc.lon), skyline.observer) > SKYLINE_MAX_KM:
-        skyline = None  # computed for somewhere else
+    skyline = places.skyline_for(loc.lat, loc.lon, ctx.data_dir)
     lit = view.sun.alt > NIGHT_SUN_ALT
     weather = None
     if ctx.config.weather.enabled:
@@ -322,45 +322,10 @@ def sky_model(now: datetime, ctx: SceneContext) -> SkyModel:
                     find_eclipse(now, loc.lat, loc.lon, view.moon.phase.phase_deg if view.moon.phase else None))
 
 
-# --- the skyline (Catalina) ----------------------------------------------------------------
+# --- the skyline (land on the horizon) --------------------------------------------------------
 
-SKYLINE_FILE = "skyline.json"
-SKYLINE_MAX_KM = 2.0
-
-
-@dataclass(frozen=True, eq=False)
-class Skyline:
-    """`data/skyline.json` (built by scripts/build-skyline.py): land on the horizon."""
-
-    name: str
-    az: np.ndarray  # degrees, increasing
-    height: np.ndarray  # degrees above the sea horizon
-    observer: tuple[float, float]  # (lat, lon) it was computed for
-
-
-def load_skyline(data_dir) -> Skyline | None:
-    """The skyline file, or None if it's missing or unreadable."""
-    return _load_skyline(Path(data_dir) / SKYLINE_FILE)
-
-
-@lru_cache(maxsize=2)
-def _load_skyline(path: Path) -> Skyline | None:
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-        pts = np.array(data["points"], dtype=float)
-        obs = data["observer"]
-        if pts.ndim != 2 or pts.shape[1] != 2 or len(pts) < 2:
-            return None
-        return Skyline(str(data.get("name", "")), pts[:, 0], pts[:, 1], (float(obs["lat"]), float(obs["lon"])))
-    except (OSError, ValueError, KeyError, TypeError):
-        return None
-
-
-def _km_between(a: tuple[float, float], b: tuple[float, float]) -> float:
-    p1, p2 = math.radians(a[0]), math.radians(b[0])
-    dl = math.radians(b[1] - a[1])
-    h = math.sin((p2 - p1) / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
-    return 2 * 6371.0 * math.asin(math.sqrt(min(1.0, h)))
+# The skyline comes from the place's data (`places.skyline_for`): only within 2 km of where it
+# was computed. `Skyline` and `load_skyline` live in places.py.
 
 
 def skyline_polygon(sk: Skyline, proj: Stereographic, exaggeration: float) -> list[tuple[float, float]]:
@@ -1008,16 +973,16 @@ def draw(c: InkCanvas, m: SkyModel, config: Config, style: SkyStyle = SkyStyle()
     if sky_cfg.labels:
         if track_on:
             sun_track_hours(c, proj, placer, m, style)
-        # Planet names first, then Catalina, bright stars and constellations.
+        # Planet names first, then the island, bright stars and constellations.
         for p, x, y_ in planets_drawn:
             ink = style.planet_label_ink if style.planet_label_ink is not None else style.planet_inks.get(p.name, YELLOW)
             gap = style.planet_radius * (2.4 if p.name == "Saturn" else 1) + 5
             spot = place_label(c, placer, (x, y_), gap, p.name, style.planet_label_size, True)
             if spot:
                 name_label(c, style, spot[0], p.name, style.planet_label_size, ink, spot[1], True)
-        if island is not None and style.island_label:
+        if island is not None and style.island_label and m.skyline is not None and m.skyline.label:
             top = min(island, key=lambda p: p[1])
-            name = "CATALINA"
+            name = m.skyline.label
             for dx, dy in ((0, 0), (-40, 0), (40, 0), (0, -14), (-40, -14), (40, -14)):
                 spot = (top[0] + dx, top[1] - 4 + dy)
                 b = text_box(c, spot, name, style.con_label_size, "mb")
