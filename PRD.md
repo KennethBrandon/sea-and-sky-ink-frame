@@ -911,11 +911,13 @@ reflection-free RAW photo, for a better green.
 | Q9 | Tailscale account to use | H1 |
 | Q10 | ~~Keep the weather/calendar idea?~~ Weather is on the day screen; no calendar (2026-11-03) | T1, T2 |
 
-## 9. Any coast (a plan, 2026-11-08; not approved yet)
+## 9. Any coast (plan approved 2026-11-08)
 
 The goal: anyone can set the frame up for their own stretch of coast. The Wedge stays the
 bundled example and the default config, and the frame already on the wall keeps working
-unchanged. This section is a survey and a plan only: no code has changed for it yet.
+unchanged. The Owner approved this plan on 2026-11-08 with the answers in 9.7, and the choices
+and tasks below follow them: US coasts get the whole frame first, and everywhere else gets
+everything but the tide table until L9 checks a global source against NOAA.
 
 Rules for every task here:
 
@@ -940,7 +942,7 @@ Rules for every task here:
 | Name, lat/lon, time zone | Yes: `location.*`, free text on the dashboard (Frame box) | Already does. Add a search by name that fills the time zone (L6) | — |
 | Latitude | Any value is accepted | `sun_events` needs exactly one sunrise, sunset, civil dawn and civil dusk a day, so there are no sun times, and no schedule, from about 60.5° in midsummer (white nights) and in polar day or night | Refuse latitudes past 60° for now (A8) |
 | Tide table: NOAA CO-OPS 9410580, MLLW, ft | Yes: `tides.station` (must be 7 digits), `tides.datum` (NOAA's datums) | The nearest NOAA prediction station, from NOAA's station list (L6) | NOAA covers US waters only. Outside the US: no tide table (L4) until a global source is chosen (L9) |
-| Measured water: Los Angeles 9410660 standing in for Newport | Yes: `gauge.enabled`, `gauge.station` | The tide station's own readings where it is itself a water-level gauge, and the gap is then a reading, not an estimate (L5) | D11's 39 km proxy was tested for Newport only. Elsewhere: the tide station's own gauge or nothing, so the tide table alone, as with the gauge off today |
+| Measured water: Los Angeles 9410660 standing in for Newport | Yes: `gauge.enabled`, `gauge.station` | The tide station's own readings where it is itself a water-level gauge, and the gap is then a reading, not an estimate (L5) | D11's 39 km stand-in was tested for Newport only. Elsewhere another gauge is allowed: the screen calls it an estimate and the dashboard warns with its distance. No gauge: the tide table alone, as with the gauge off today |
 | Weather (Open-Meteo forecast) | `weather.enabled` | Already follows: the cache refetches when lat/lon change | Global. Only units (L3) |
 | Swell and water temperature (Open-Meteo marine) | `surf.enabled` | Follows, but the cache doesn't refetch when the location changes, so the old place's swell stays up to an hour (fix in L6) | A lake or enclosed bay can get empty rows: the swell box is left out and the sea is drawn flat, as today with no swell data |
 | Window bearing, 190° | Yes: `sky.center_azimuth_deg` (the sky and sea screens use it) | Already does | — |
@@ -948,10 +950,10 @@ Rules for every task here:
 | Sea, surf and sand below the sky's horizon | No (`SkyStyle.beach` exists in code) | `sky.foreground`: `beach` or `plain`, for a window that doesn't look at the sea (L8) | — |
 | Catalina on the horizon | `data/skyline.json`, already dropped more than 2 km from its observer; the "CATALINA" label is hard-coded in `scenes/sky.py` | Moves into the place's data, label included (L1). `scripts/build-skyline.py` builds a single fixed island box from Newport; a sweep of all land across the window's view would work anywhere (L7) | Open sea to the horizon, as the sky already draws 2 km from the Wedge |
 | Harbor chart | `harbor.south`, `north`, `center_lon`, limited to Newport's box (33.54–33.70, −118.02 to −117.78); the map is `data/harbor.json` | Moves into the place's data (L1). The build script and screen need generalizing (L7): title "NEWPORT BAY" and hand-placed names and nudges in `scenes/harbor.py`; island names keyed by OSM way ids; the ocean filled "to the south" of the coast (`FAR_SOUTH`); lat/lon ticks that read only north and west; channel marks drawn as US (IALA B) shapes; soundings from NOAA ENC (US only), in feet below MLLW | No harbor chart: the screen leaves the rotations (L2) |
-| Sea screen | Window bearing only | The jetty's outline (drawn by the Owner on the canvas), the flat harbor mouth behind it, the beach's 0–7 ft tide range and Catalina move into the place's data (L1) | No jetty, an open beach whose width follows the station's own range, and an open horizon |
-| Combo | Follows its four screens | Follows them | Without a harbor chart or a tide table, its quarter needs a design (Q-L3) |
+| Sea screen | Window bearing only (a window that doesn't face the sea gets `sea.facing_deg`, L8) | The jetty's outline (drawn by the Owner on the canvas), the flat harbor mouth behind it, the beach's 0–7 ft tide range and Catalina move into the place's data (L1) | No jetty, an open beach whose width follows the station's own range, and an open horizon |
+| Combo | Follows its four screens | Follows them | No harbor chart: that quarter shows the current photo, or the sea with no photos to show (Q-L3). No tide table: its tide panel follows the day screen's swell and wind chart (L4) |
 | Sky, Moon, eclipses | Follow the location | Stars cover the whole sky (1,663 down to −83.7°), with lines for all 88 constellations, Crux included; the Milky Way is all-sky; eclipses are found for anywhere | Never tried south of the equator: L8 tests it |
-| Units and clock | No: ft, °F, mph, 12-hour clock, English day names; the dashboard formats en-US | `display.units`, `display.clock`, on the screens and the dashboard (L3) | — |
+| Units and clock | No: ft, °F, mph, 12-hour clock, English day names; the dashboard formats en-US | `display.units`, `display.wind`, `display.clock`, on the screens and the dashboard (L3) | — |
 | Dashboard words | — | Help names 9410580, 9410660 and the Newport gauge story, the harbor's number ranges and "facing south"; About credits Newport's stations, Catalina and ENC; `/api/status` calls every screen available. Fill them from config and the place's data (L2, L10) | Credits only for what's in use |
 | Docs and scripts | — | README ("Somewhere other than Newport Beach" says another coast needs its own versions), `data/README.md`, `LICENSE` (Catalina, harbor), `docs/pi-setup.md`; `flash-sd.sh` hard-codes the LA time zone, Wi-Fi country US and a US keymap (L10) | — |
 | Tests | — | No golden-image or hash test; about 65 lines of Newport constants (`WEDGE`, `LA`, station ids, the USNO table); every fixture is Newport, 2026-11-02 to 11-04 | Each task adds fixtures for its second place (L4, L5, L6, L8) |
@@ -960,24 +962,24 @@ Rules for every task here:
 
 | # | Choice | Why |
 |---|---|---|
-| A1 | **Place data in a folder per place.** Everything about one spot that isn't a setting moves out of the code into `data/places/<id>/`: `skyline.json` and `harbor.json` as built (never edited by hand), and `place.json` for the hand-made parts (names and where they sit, the harbor's title and default view, the island's label, the sea's jetty and beach range). A place applies when the frame is within 2 km of its observer, the skyline's rule today, so there's no setting to forget. Places built for one frame live in `~/.config/photopainter/places/` on the Pi, which a deploy doesn't overwrite, and win over the bundled ones | Newport stops being code, and a place nobody has built simply has no island, jetty or harbor chart, which is the right fallback. Matching by distance means changing the location can never leave the Wedge's jetty drawn somewhere else |
+| A1 | **Place data in a folder per place.** Everything about one spot that isn't a setting moves out of the code into `data/places/<id>/`: `skyline.json` and `harbor.json` as built (never edited by hand), and `place.json` for the hand-made parts (names and where they sit, the harbor's title and default view, the island's label, the sea's jetty and beach range). Each part is matched automatically, with no setting (Owner, 2026-11-08): the skyline within 2 km of its observer, as today; the harbor chart anywhere inside its own chart area; the sea's jetty and beach within 2 km of their observer and with the window facing within 45° of the bearing they were drawn for, since the jetty is drawn on the picture as seen from that spot looking that way. Places built for one frame live in `~/.config/photopainter/places/` on the Pi, which a deploy doesn't overwrite, and win over the bundled ones | Newport stops being code, and a place nobody has built simply has no island, jetty or harbor chart, which is the right fallback. Matching by distance means changing the location can never leave the Wedge's jetty drawn somewhere else |
 | A2 | **A screen goes where its data does.** One without data for this place leaves the rotations the way a photo step does with no photos (`Schedule.without_photos`, generalized), a pin of it is refused with the reason, and the dashboard greys its box with what's missing and how to get it | The frame never shows an empty or wrong screen, and a rotation never needs editing by hand after a move |
-| A3 | **Units are how it's written, not what's stored.** `display.units` (`us` or `metric`: ft or m, °F or °C, mph or km/h) and `display.clock` (`12h` or `24h`). Caches stay imperial; the words and the chart labels convert; drawing thresholds such as whitecaps from 10 mph stay as they are | No cache or source changes, and the defaults leave every pixel alone |
-| A4 | **Tides from NOAA first, none elsewhere, a global source only after measuring.** `tides.source`: `noaa` (default) or `none`. A global source (L9) is picked only once it's checked against NOAA's tables, the way D11 checked the gauge | NOAA is free, accurate and already built. Showing a modelled tide as if it were a table would mislead the people it's for |
-| A5 | **Measured water from the tide station's own gauge.** A different gauge (Newport's Los Angeles case) needs a check like D11's, and the screen says "estimate" only then | Where the station measures, the gap is a reading rather than an estimate |
+| A3 | **Units are how it's written, not what's stored.** Three settings (Owner, 2026-11-08): `display.units` (`us` or `metric`: ft or m, °F or °C), `display.wind` (`mph`, `km/h` or `kn`) and `display.clock` (`12h` or `24h`), by default `us`, `mph` and `12h`. Caches stay imperial; the words and the chart labels convert; drawing thresholds such as whitecaps from 10 mph stay as they are | No cache or source changes, and the defaults leave every pixel alone |
+| A4 | **Tides from NOAA first, none elsewhere, a global source only after measuring.** `tides.source`: `noaa` (default) or `none`. With no tide table, the day screen's tide box and chart become a three-day chart of swell height and wind from Open-Meteo (Owner, 2026-11-08). A global source (L9, later) is picked only once it's checked against NOAA's tables, the way D11 checked the gauge | NOAA is free, accurate and already built. Showing a modelled tide as if it were a table would mislead the people it's for |
+| A5 | **Measured water from the tide station's own gauge where it has one.** Another gauge is allowed (Owner, 2026-11-08): the screen calls the line an estimate, as it does for Newport's Los Angeles stand-in, and the dashboard warns with the gauge's distance. With no gauge, the tide table alone | Where the station measures, the gap is a reading rather than an estimate |
 | A6 | **Arrows turn with the window, to the nearest compass point.** `tides.flip_arrows` on means "as seen from the window", snapped to N, E, S or W; off is north up | A north-facing window in the south gets right-way arrows, and 190° stays exactly today's south |
-| A7 | **The dashboard sets a place up with small lookups; the Mac builds the maps.** On the Pi: Open-Meteo's geocoding (a search by name), its time zone for a point, NOAA's station lists (about 2 MB, kept a week), and how far Open-Meteo's marine cell is. Skylines and harbor charts are built on the Mac and uploaded to the frame | The builders pull megabytes from Overpass and thousands of terrain points from a rate-limited API, and the harbor builder holds it all in memory. Whether they could run on the Pi is measured in L7 before the dashboard offers it |
+| A7 | **The dashboard sets a place up with small lookups; a computer builds the maps.** On the Pi: Open-Meteo's geocoding (a search by name), its time zone for a point, NOAA's station lists (about 2 MB, kept a week), and how far Open-Meteo's marine cell is. Skylines and harbor charts are built by script on a computer, Mac or PC, and uploaded on the dashboard (Owner, 2026-11-08) | The builders pull megabytes from Overpass and thousands of terrain points from a rate-limited API, and the harbor builder holds it all in memory. The Pi only does the small lookups |
 | A8 | **No places past 60° latitude for now.** `config.validate` refuses them with a reason | The sun code needs a sunset and a civil dusk every day. Making white nights and polar days work is its own task (backlog) |
 
 ### 9.3 Where data doesn't exist
 
 | | The Wedge (bundled) | US coast, no place data | Outside the US, no place data | Any place with its own data built |
 |---|---|---|---|---|
-| Day screen | As today | Nearest NOAA table; measured water if the station measures | No tide table: the design from L4 (until L9) | As for its coast |
+| Day screen | As today | Nearest NOAA table; measured water from its own gauge, or another one as an estimate | A three-day chart of swell height and wind in place of the tide box and chart (L4, until L9) | As for its coast |
 | Sky | As today | Open horizon; sand and surf, or plain (`sky.foreground`) | The same | Its own skyline and label |
-| Sea | As today | No jetty, open beach | The same; flat sea if there's no marine data | Its own jetty (if drawn) and island |
+| Sea | As today | No jetty, open beach; toward the open water if the window doesn't face it | The same; flat sea if there's no marine data | Its own jetty (if drawn) and island |
 | Harbor chart | As today | Off (A2) | Off | Its own map; soundings only where NOAA ENC covers it |
-| Combo | As today | Design from Q-L3 | The same | As today's layout |
+| Combo | As today | The current photo in the harbor quarter, or the sea with no photos | The same, with the swell and wind chart in the tide panel | As today's layout |
 
 ### 9.4 Setting up a new place
 
@@ -986,25 +988,29 @@ On the dashboard (L6), in a Place box under Frame:
 1. Search by name (Open-Meteo geocoding, data from GeoNames, credited) or type a latitude and
    longitude. The time zone fills itself in.
 2. The box says what this place gets before anything is saved: the nearest NOAA tide station
-   and how far away it is (or "no tide table here"); whether that station measures the water;
+   and how far away it is (or "no tide table here: swell and wind instead"); whether that
+   station measures the water, or the nearest gauge that does and how far away it is;
    how far offshore the marine model's cell is; which place data matches, if any (skyline,
    harbor chart, jetty).
-3. Set the window's bearing, with the sky preview to check it, and units and clock.
+3. Set the window's bearing, with the sky preview to check it, whether it looks at the sea
+   (if not, which way the open water is, for the sea screen), and units, wind and clock.
 4. Save. The caches refetch for the new place on the next tick, and screens without data
    leave the rotations (A2).
-5. Optionally upload place data built on the Mac (the JSON files of one place). They go to
+5. Optionally upload place data built on a computer (the JSON files of one place). They go to
    `~/.config/photopainter/places/`.
 
-On the Mac (L7): `scripts/build-place.py --name … --lat … --lon … --window-bearing …
+On a computer, Mac or PC (L7): `scripts/build-place.py --name … --lat … --lon … --window-bearing …
 [--harbor S,W,N,E]` builds the skyline from a sweep of terrain across the window's view and
 the harbor chart from OpenStreetMap (plus NOAA ENC soundings in US waters) into a folder,
 with names placed automatically from OSM for a person to adjust in `place.json`. It reads
-saved inputs as well as fetching, so tests need no network.
+saved inputs as well as fetching, so tests need no network. It needs only Python's standard
+library and NumPy, so it runs on Windows and Linux as well as the Mac.
 
-### 9.5 Contract changes (need the Owner's OK)
+### 9.5 Contract changes (approved with the plan, 2026-11-08)
 
-- Config: `display.units` (`us`), `display.clock` (`12h`), `tides.source` (`noaa`),
-  `sky.foreground` (`beach`); `tides.station`'s format checked by source; `location.lat`
+- Config: `display.units` (`us`), `display.wind` (`mph`), `display.clock` (`12h`),
+  `tides.source` (`noaa`), `sky.foreground` (`beach`), `sea.facing_deg` (null: the window's
+  bearing); `tides.station`'s format checked by source; `location.lat`
   limited to ±60; the harbor's view limits widened to any latitude and longitude, with a view
   that misses this place's map falling back to its default view (a place change on the
   dashboard writes that view). Each default is today's behavior.
@@ -1026,18 +1032,20 @@ graph LR
   L2 & L5 & L6 & L7 --> L10
 ```
 
+US coasts first (Q-L1): L0-L8 and L10 now, L9 later.
+
 | ID | Task | Depends on | Status |
 |---|---|---|---|
 | L0 | Golden screens for the Wedge | — | todo |
 | L1 | Place data out of the code | L0 | todo |
 | L2 | Screens follow what's there | L1 | todo |
-| L3 | Units and clock | L0 | todo |
+| L3 | Units, wind and clock | L0 | todo |
 | L4 | Tide source, and a day screen without a tide table | L0 | todo |
 | L5 | Measured water beyond Newport | L4 | todo |
 | L6 | Place setup on the dashboard | L1, L4 | todo |
-| L7 | Building place data on the Mac | L1 | todo |
+| L7 | Building place data on a computer | L1 | todo |
 | L8 | Any window, either hemisphere | L0 | todo |
-| L9 | A tide table outside the US | L4 | todo |
+| L9 | A tide table outside the US | L4 | later (Q-L1) |
 | L10 | Words and docs | L2, L5, L6, L7 | todo |
 
 **L0. Golden screens for the Wedge.** Files: `tests/test_golden.py`, `tests/fixtures/golden_wedge.json`.
@@ -1066,13 +1074,17 @@ and today's `skyline.json` and `harbor.json` moved, not rebuilt); `scenes/sky.py
 
 **L2. Screens follow what's there.** Files: `schedule.py` (`Schedule.without(kinds)`, generalizing
 `without_photos`), `tick.py`, `web/server.py` (`screens`: `available`, `why`), `web/static/app.js`.
-- What each screen needs: harbor, place data with a map; tides, a tide source other than
-  `none` (until L4's design says otherwise); the sea and the sky, nothing.
+- What each screen needs: harbor, place data whose chart area holds the location; the day
+  screen, the sea and the sky, nothing (with no tide table the day screen draws swell and
+  wind, L4).
+- The combo with no harbor chart (Owner, 2026-11-08): that quarter shows the current photo,
+  drawn for its size, or the sea when there are no photos to show.
 - Accept: with no place data, the default day rotation gives the harbor's ten minutes to its
   neighbors; a Harbor pin is refused with the reason; the dashboard's Harbor box says what's
-  missing and how to build it; the combo follows Q-L3's answer; L0 unchanged.
+  missing and how to build it; the combo's harbor quarter shows the photo, or the sea with
+  no photos; L0 unchanged.
 
-**L3. Units and clock.** Files: `config.py` + `config.example.json`, `scenes/tides.py` (its
+**L3. Units, wind and clock.** Files: `config.py` + `config.example.json`, `scenes/tides.py` (its
 format helpers become the one place units are written), `sky.py`, `sea.py`, `harbor.py`
 (soundings in metres), `combo.py`, `web/static/app.js` (times and dates).
 - Accept: L0 unchanged at the defaults; tests for each conversion and rounding (no "−0.0",
@@ -1083,15 +1095,17 @@ format helpers become the one place units are written), `sky.py`, `sea.py`, `har
 `sources/tides.py`, `sources/__init__.py`, `scenes/tides.py`, `scenes/harbor.py` (its tide band),
 `scenes/combo.py` (its tide panel), tests with a second US station's recorded answers.
 - `tides.source`: `noaa` or `none`; `none` fetches nothing.
-- Without a tide table the day screen needs a design: what takes the tide box's place and the
-  chart's (Q-L2). Designed with the Owner over labeled previews, like T2.
-- Accept: a NOAA station anywhere in the US draws the day screen; `none` draws the approved
-  design; L0 unchanged.
+- Without a tide table the tide box and chart become a three-day chart of swell height and
+  wind from Open-Meteo (Owner, 2026-11-08); the harbor's band and the combo's tide panel
+  follow. Its look is designed with the Owner over labeled previews, like T2.
+- Accept: a NOAA station anywhere in the US draws the day screen; `none` draws the swell and
+  wind chart the Owner approves; L0 unchanged.
 
 **L5. Measured water beyond Newport.** Files: `sources/gauge.py`, `config.py`, `scenes/tides.py`,
 `web/static/app.js` (help text), tests with a NOAA station that measures its own water level.
 - When `gauge.station` is the tide station, the gap is that station's own reading and the
-  words drop "estimate". A different gauge follows Q-L5.
+  words drop "estimate". Another gauge is allowed: the screen calls it an estimate and the
+  dashboard warns with its distance from the tide station. No gauge: the tide table alone.
 - Accept: the measured line for the second US station; Newport unchanged (L0).
 
 **L6. Place setup on the dashboard.** Files: new `web/place.py`, `web/server.py`,
@@ -1103,7 +1117,7 @@ answers from Open-Meteo's geocoding and time zone and NOAA's station lists.
   whose available screens all draw after one tick, and back to the Wedge gives L0's hashes;
   the station lookup measured on the Pi (time and memory); no personal details sent.
 
-**L7. Building place data on the Mac.** Files: `scripts/build-place.py` (or `build-skyline.py`
+**L7. Building place data on a computer.** Files: `scripts/build-place.py` (or `build-skyline.py`
 and `build-harbor.py` with arguments), `scenes/harbor.py`, `data/README.md`, tests from saved
 inputs.
 - Skyline: a terrain sweep across the window's view out to about 120 km (islands, headlands,
@@ -1112,13 +1126,16 @@ inputs.
   direction, not "to the south"; island names from OSM, not way ids; channel marks drawn
   from OSM's color and shape tags, so IALA A and B both come out right; soundings from NOAA
   ENC where it covers, none elsewhere; lat/lon ticks with N, S, E and W.
+- Standard library and NumPy only, through `sources/common.get_json` rather than `curl`, so
+  it runs on a Mac or a PC (Owner, 2026-11-08); its output is uploaded on the dashboard (L6).
 - Accept: data for two public test places, one in the US and one outside, drawn without
-  overlapping names, over previews the Owner approves; the Wedge's bundled data left as it is;
-  time and peak memory on the Pi measured for both builders, to decide whether the dashboard
-  may build later.
+  overlapping names, over previews the Owner approves; the Wedge's bundled data left as it is.
 
 **L8. Any window, either hemisphere.** Files: `scenes/tides.py` (`flow_arrow`), `sky.py`
-(`sky.foreground`), `sea.py`, `config.py`, tests at a public place about 34° S.
+(`sky.foreground`), `sea.py` (`sea.facing_deg`), `config.py`, tests at a public place about 34° S.
+- A window that doesn't face the sea still gets the sea screen (Owner, 2026-11-08), drawn as
+  if looking toward the open water and the swell: `sea.facing_deg`, set on the dashboard
+  with the window. Anyone can drop the screen from the rotation.
 - Accept: L0 unchanged (190° snaps to south); at a north-facing window in the south the Sun
   crosses the top of the sky at noon, the arrows point the way the wind blows as seen from
   that window, and the harbor's ticks read S and E; `sky.foreground: plain` draws the plain
@@ -1147,15 +1164,15 @@ Wi-Fi country and keymap as options), `CLAUDE.md`.
 Backlog: white nights and polar days (lifts A8); other languages; more tide services; other
 views below the horizon (cliffs, a harbor wall).
 
-### 9.7 Open questions (for the Owner)
+### 9.7 Questions (answered by the Owner, 2026-11-08)
 
 | # | Question | Affects |
 |---|---|---|
-| Q-L1 | Which places come first: US coasts only (NOAA, cheap), or outside the US too (needs L9)? | Order of L4–L9 |
-| Q-L2 | The day screen with no tide table: what takes the tide box and chart's place? For example a three-day chart of swell and wind, or of temperature | L4 |
-| Q-L3 | The combo without a harbor chart (or a tide table): what fills that quarter? A taller tide chart, the photo, the sea larger? | L2 |
-| Q-L4 | Metric as one switch (°C, m, km/h), or wind on its own (knots for sailors)? Is the 24-hour clock separate from metric? | L3 |
-| Q-L5 | A gauge other than the tide station's own: allowed with "estimate" and a warning, or only with a check like D11's? | L5 |
-| Q-L6 | Place data matched by distance (2 km) with no setting: is that right, and is 2 km the right distance for a harbor chart? | L1 |
-| Q-L7 | Should the dashboard ever build skylines and harbor charts on the Pi, or always on the Mac with an upload? | L6, L7 |
-| Q-L8 | A sea screen for a window that doesn't face the sea: drawn toward the swell anyway, or turned off? | L8 |
+| Q-L1 | Which places come first: US coasts only (NOAA, cheap), or outside the US too (needs L9)? **US first, the world later:** the whole frame on US coasts now; elsewhere everything but the tide table until L9 checks a global source against NOAA | Order of L4–L9 |
+| Q-L2 | The day screen with no tide table: what takes the tide box and chart's place? **A three-day chart of swell height and wind, from Open-Meteo** | L4 |
+| Q-L3 | The combo without a harbor chart (or a tide table): what fills that quarter? **The current photo; the sea when there are no photos to show** | L2 |
+| Q-L4 | Metric as one switch (°C, m, km/h), or wind on its own (knots for sailors)? Is the 24-hour clock separate from metric? **Three settings: units US or metric (ft or m, °F or °C); wind on its own, mph, km/h or knots; clock 12 h or 24 h. Defaults US, mph, 12 h** | L3 |
+| Q-L5 | A gauge other than the tide station's own: allowed with "estimate" and a warning, or only with a check like D11's? **Allowed: the screen labels it an estimate and the dashboard warns with the distance. No gauge: the tide table alone** | L5 |
+| Q-L6 | Place data matched by distance (2 km) with no setting: is that right, and is 2 km the right distance for a harbor chart? **Automatic, a rule per kind: the skyline within 2 km of its observer; a harbor chart anywhere inside its chart area; the sea's jetty and beach (chosen here) within 2 km of their observer with the window within 45° of the bearing they were drawn for** | L1 |
+| Q-L7 | Should the dashboard ever build skylines and harbor charts on the Pi, or always on the Mac with an upload? **Built by script on a computer (Mac or PC), uploaded on the dashboard; the Pi only does small lookups** | L6, L7 |
+| Q-L8 | A sea screen for a window that doesn't face the sea: drawn toward the swell anyway, or turned off? **Still drawn, as if looking toward the open water and the swell; anyone can drop it from the rotation** | L8 |
