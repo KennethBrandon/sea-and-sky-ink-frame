@@ -1036,9 +1036,9 @@ US coasts first (Q-L1): L0-L8 and L10 now, L9 later.
 
 | ID | Task | Depends on | Status |
 |---|---|---|---|
-| L0 | Golden screens for the Wedge | — | todo |
-| L1 | Place data out of the code | L0 | todo |
-| L2 | Screens follow what's there | L1 | todo |
+| L0 | Golden screens for the Wedge | — | done (2026-11-08): 15 screens and moments |
+| L1 | Place data out of the code | L0 | done (2026-11-08): `places.py`, `data/places/wedge/` |
+| L2 | Screens follow what's there | L1 | done (2026-11-08): `screens.py`; the combo's sea across its bottom row (no harbor chart, no photos) awaits the Owner's look |
 | L3 | Units, wind and clock | L0 | todo |
 | L4 | Tide source, and a day screen without a tide table | L0 | todo |
 | L5 | Measured water beyond Newport | L4 | todo |
