@@ -73,7 +73,7 @@ def test_every_line_endpoint_is_a_star_and_files_are_small():
         for a, b in c["lines"]:
             assert a in stars and b in stars, (c["abbr"], a, b)
     total = sum((DATA / n).stat().st_size for n in ("stars.json", "constellations.json", "milkyway.png",
-                                                    "skyline.json"))
+                                                    "places/wedge/skyline.json"))
     assert total < 500_000
 
 
@@ -289,13 +289,15 @@ def test_moon_just_past_the_edge_gets_a_marker_not_a_sliver(ephemeris):
 
 
 def test_skyline_is_catalina_and_only_from_near_the_wedge(ephemeris):
-    sk = sky.load_skyline(DATA)
+    sk = sky.load_skyline(DATA / "places" / "wedge")
     assert sk.name == "Santa Catalina Island" and sk.observer == WEDGE
     assert 225 < sk.az.min() < sk.az.max() < 265
     assert 0.2 < sk.height.max() < 0.8  # it really is under a degree tall
     far = replace(default_config(), location=replace(default_config().location, lat=34.5))
     assert sky.sky_model(local("2026-11-04T21:30"), ctx(far)).skyline is None
-    assert sky.sky_model(local("2026-11-04T21:30"), ctx()).skyline is sk
+    near = sky.sky_model(local("2026-11-04T21:30"), ctx()).skyline
+    assert near.name == sk.name and near.label == "CATALINA"  # its label from the place's place.json
+    assert np.array_equal(near.az, sk.az) and np.array_equal(near.height, sk.height)
 
 
 def test_plain_band_instead_of_the_beach(ephemeris):

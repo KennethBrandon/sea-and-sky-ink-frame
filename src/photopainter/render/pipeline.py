@@ -26,9 +26,10 @@ class RenderOptions:
     vibrance: float = 0.5
 
 
-def render(img: Image.Image, opts: RenderOptions = RenderOptions()) -> np.ndarray:
-    """Return ink indices for the canvas as the viewer sees it (480x800 if portrait)."""
-    canvas = fit_to_canvas(img, canvas_size(opts.portrait), opts.fit)
+def render(img: Image.Image, opts: RenderOptions = RenderOptions(), size: tuple[int, int] | None = None) -> np.ndarray:
+    """Return ink indices for the canvas as the viewer sees it (480x800 if portrait), or for
+    a canvas of `size` (width, height), such as the combo screen's quarter."""
+    canvas = fit_to_canvas(img, size or canvas_size(opts.portrait), opts.fit)
     canvas = enhance(canvas, opts.saturation, opts.contrast, opts.gamma, opts.vibrance)
     return map_to_inks(canvas, opts.palette, opts.dither)
 

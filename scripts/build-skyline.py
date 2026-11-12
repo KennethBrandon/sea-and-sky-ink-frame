@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build data/skyline.json: Santa Catalina Island's skyline as seen from the Wedge.
+"""Build data/places/wedge/skyline.json: Santa Catalina Island's skyline as seen from the Wedge.
 
 Run on the Mac only, from the repo root:
 
@@ -144,7 +144,7 @@ def main() -> int:
         "observer": {"lat": OBSERVER[0], "lon": OBSERVER[1], "eye_m": EYE_M},
         "points": points,
     }
-    path = REPO / "data" / "skyline.json"
+    path = REPO / "data" / "places" / "wedge" / "skyline.json"
     path.write_text(json.dumps(out, indent=1) + "\n", encoding="utf-8")
     top = max(points, key=lambda p: p[1])
     print(f"{path}: {len(points)} points, az {points[0][0]}-{points[-1][0]}, "

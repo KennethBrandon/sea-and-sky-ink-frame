@@ -19,7 +19,7 @@ in words in the title block (Owner), keyed with small copies of their arrows, in
 ticks on the border.
 
 The view comes from config: `harbor.south` and `harbor.north` are the map's bottom and top,
-above the tide band, and the width follows from its shape and `harbor.center_lon`. A view reaching past what `data/harbor.json`
+above the tide band, and the width follows from its shape and `harbor.center_lon`. A view reaching past what the place's `harbor.json`
 covers is shrunk, then moved, to fit. Marks, names and soundings follow the view; the title
 block, rose and scale bar stay where they are on the screen, and depths under
 them are left out.
@@ -41,22 +41,22 @@ too small to read (Owner, 2026-11-06).
 The green fringe along the marsh widens as the tide drops, from the mockup; it's a picture
 of mud showing, not surveyed data.
 
-Missing caches leave out what they feed; the chart itself needs only `data/harbor.json`.
+Missing caches leave out what they feed; the chart itself needs only the place's harbor chart
+(`places.harbor_for`: `harbor.json` and `place.json` in its folder, `data/places/wedge/` for the
+Wedge). Where there's none it raises `places.NoPlaceData`.
 """
 
 from __future__ import annotations
 
-import json
 import math
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
-from functools import lru_cache
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Iterable
 
 import numpy as np
 from PIL import Image, ImageDraw
 
+from photopainter import places
 from photopainter.config import Harbor as HarborSettings
 from photopainter.render.draw import INK, InkCanvas, font, line_height, text_width
 from photopainter.scenes.base import Scene, SceneContext
@@ -73,7 +73,6 @@ WIND_INK, SWELL_INK = GREEN, BLUE  # red is taken: the measured water and the po
 W, H = 800, 480  # the chart is drawn at this size; a portrait canvas gets it cropped (PRD Q6)
 BAND_H = 120  # the tide, along the bottom
 MAP_H = H - BAND_H
-HARBOR_FILE = "harbor.json"
 MIN_LAT_SPAN = 0.005
 FAR_SOUTH = 2.0  # degrees below the view the ocean polygon closes at
 
@@ -83,29 +82,14 @@ OCEAN_DOTS = 0.125  # one dot in eight: paler than the mockup's 22 %, so text re
 MARSH_DOTS = 0.50
 FRINGE_DOTS = 0.30
 BEACH_DOTS = 0.70
-MARSH_FULL_FT = 5.5  # the fringe starts below this tide…
+# The marsh's fringe starts below the place's `marsh_full_ft` (none without one)…
 FRINGE_PX_PER_FT = 2.2  # …and widens this much per foot
 HARBOR_SOUNDING_CELL = 40  # px between depths in the harbor…
 OCEAN_SOUNDING_CELL = 88  # …and on the ocean
 SOUNDING_SIZE = 11
 
-# name, lat, lon, size, bold, rotated degrees, ink name
-PLACE_NAMES: tuple[tuple[str, float, float, int, bool, float, str], ...] = (
-    ("BALBOA PENINSULA", 33.6021, -117.9135, 12, True, 27.0, "black"),
-    ("CORONA DEL MAR", 33.5992, -117.8690, 11, True, 0.0, "black"),
-    ("NEWPORT BEACH", 33.6205, -117.9155, 11, True, 0.0, "black"),
-    ("PACIFIC  OCEAN", 33.5975, -117.9103, 16, True, 0.0, "blue"),
-)
-# name, lat, lon, x and y offset from there, anchor
-LANDMARKS: tuple[tuple[str, float, float, int, int, str], ...] = (
-    ("The Wedge", 33.5925, -117.8788, -4, 10, "rm"),
-    ("Newport Pier", 33.6058, -117.9302, 2, 12, "lm"),
-    ("Balboa Pier", 33.5983, -117.9006, 4, 2, "lm"),
-)
-ISLAND_NUDGE = {"Bay Is.": (-14, -9), "Newport Is.": (0, 10), "Little Balboa": (8, 6)}  # px, off a beacon and a name
-ISLAND_LINES = {"Little Balboa": ("Little", "Balboa")}  # it's too narrow for one line
-BOLD_ISLANDS = {"Lido Isle", "Balboa Island"}
-BIG_PIERS = {"Newport Pier", "Balboa Pier"}
+# Names, where they sit and which are bold come from the place's data (places.py, place.json's
+# `harbor`): place_names, landmarks, island_nudge, island_lines, bold_islands, big_piers.
 
 Rect = tuple[float, float, float, float]
 
@@ -133,9 +117,12 @@ class View:
         return 1.0 / (self.deg_per_px_lat * 110.95)
 
 
-def make_view(s: HarborSettings, bounds: dict[str, float]) -> View:
-    """The view for settings `s`, fitted inside what the data covers."""
+def make_view(s: HarborSettings, bounds: dict[str, float], fallback: HarborSettings | None = None) -> View:
+    """The view for settings `s`, fitted inside what the data covers. A view that misses the
+    data altogether (settings made for another place) takes `fallback`, the place's own view."""
     south_b, north_b, west_b, east_b = bounds["south"], bounds["north"], bounds["west"], bounds["east"]
+    if fallback is not None and _misses(s, bounds):
+        s = fallback
     south, north = sorted((s.south, s.north))
     span = max(north - south, MIN_LAT_SPAN)
     cos_lat = math.cos(math.radians((south + north) / 2))
@@ -148,17 +135,41 @@ def make_view(s: HarborSettings, bounds: dict[str, float]) -> View:
                 deg_per_px_lat=span / MAP_H, height=MAP_H, south=south)
 
 
+def _misses(s: HarborSettings, bounds: dict[str, float]) -> bool:
+    """Whether the view `s` asks for lies wholly outside `bounds`."""
+    south, north = sorted((s.south, s.north))
+    span = max(north - south, MIN_LAT_SPAN)
+    half_lon = span * (W / MAP_H) / math.cos(math.radians((south + north) / 2)) / 2
+    return (north < bounds["south"] or south > bounds["north"]
+            or s.center_lon + half_lon < bounds["west"] or s.center_lon - half_lon > bounds["east"])
+
+
 # --- data ------------------------------------------------------------------------------------
 
 
-def load_harbor(data_dir: Path) -> dict[str, Any]:
-    """`data/harbor.json` (scripts/build-harbor.py). Raises FileNotFoundError if it's missing."""
-    return _load(Path(data_dir) / HARBOR_FILE)
+def harbor_data(ctx: SceneContext) -> dict[str, Any]:
+    """The place's harbor chart (places.harbor_for): `harbor.json` with place.json's choices
+    under "place". Raises places.NoPlaceData where there's none."""
+    loc = ctx.config.location
+    data = places.harbor_for(loc.lat, loc.lon, ctx.data_dir)
+    if data is None:
+        raise places.NoPlaceData(f"no harbor chart for {loc.name} ({loc.lat}, {loc.lon})")
+    return data
 
 
-@lru_cache(maxsize=2)
-def _load(path: Path) -> dict[str, Any]:
-    return json.loads(path.read_text())
+def place_view(data: dict[str, Any]) -> HarborSettings | None:
+    """The place's own view (place.json's `harbor.view`), or None."""
+    view = data.get("place", {}).get("view")
+    try:
+        return HarborSettings(south=float(view["south"]), north=float(view["north"]),
+                              center_lon=float(view["center_lon"]))
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def title(data: dict[str, Any]) -> str:
+    """The chart's title: the place's, else the harbor file's name."""
+    return str(data.get("place", {}).get("title") or data.get("name") or "")
 
 
 # --- ink helpers -----------------------------------------------------------------------------
@@ -276,8 +287,9 @@ def draw_map(c: InkCanvas, data: dict[str, Any], view: View, tide_ft: float | No
     dots(c, harbor, BLUE, HARBOR_DOTS, base=WHITE)
 
     marsh = polys_mask(view, data["marsh"])
-    if tide_ft is not None:
-        spread = round(max(0.0, MARSH_FULL_FT - tide_ft) * FRINGE_PX_PER_FT)
+    marsh_full_ft = data.get("place", {}).get("marsh_full_ft")
+    if tide_ft is not None and marsh_full_ft is not None:
+        spread = round(max(0.0, marsh_full_ft - tide_ft) * FRINGE_PX_PER_FT)
         dots(c, grow(marsh, spread) & harbor & ~marsh, GREEN, FRINGE_DOTS)
     dots(c, marsh, GREEN, MARSH_DOTS, base=WHITE)
     dots(c, polys_mask(view, data["beaches"]), YELLOW, BEACH_DOTS, base=WHITE)
@@ -290,8 +302,9 @@ def draw_map(c: InkCanvas, data: dict[str, Any], view: View, tide_ft: float | No
     inside[:, :-1] &= water[:, 1:]
     dots(c, water & ~inside, BLACK)
 
+    big_piers = set(data.get("place", {}).get("big_piers", ()))
     for pier in data["piers"]:
-        width = 5 if pier["kind"] != "pier" else 4 if pier.get("name") in BIG_PIERS else 2
+        width = 5 if pier["kind"] != "pier" else 4 if pier.get("name") in big_piers else 2
         c.draw.line(_pts(view, pier["line"]), fill=BLACK, width=width)
     return Map(ocean, harbor | other_water, ~water)
 
@@ -324,7 +337,13 @@ def draw_names(c: InkCanvas, data: dict[str, Any], view: View, blocked: list[Rec
     a fixed part of the screen) is left out."""
     taken: list[Rect] = []
     busy = lambda r: overlaps(r, blocked) or overlaps(r, taken)  # noqa: E731
-    for name, lat, lon, size, bold, angle, ink in PLACE_NAMES:
+    place = data.get("place", {})
+    nudges = {k: tuple(v) for k, v in place.get("island_nudge", {}).items()}
+    island_lines = {k: tuple(v) for k, v in place.get("island_lines", {}).items()}
+    bold_islands = set(place.get("bold_islands", ()))
+    for p in place.get("place_names", ()):
+        name, lat, lon, size, bold, angle, ink = (p["name"], p["lat"], p["lon"], p["size"], p.get("bold", True),
+                                                  p.get("angle", 0.0), p.get("ink", "black"))
         if not view.contains(lat, lon):
             continue
         x, y = view.xy(lat, lon)
@@ -336,10 +355,11 @@ def draw_names(c: InkCanvas, data: dict[str, Any], view: View, blocked: list[Rec
         elif not busy(label_rect((x, y), name, size, "mm", bold)):
             label(c, (x, y), name, size, INK[ink], bold, "mm", halo=WHITE if ink == "blue" else None)
             taken.append(label_rect((x, y), name, size, "mm", bold))
-    for name, lat, lon, dx, dy, anchor in LANDMARKS:
+    for p in place.get("landmarks", ()):
+        name, lat, lon, dx, dy, anchor, bold = (p["name"], p["lat"], p["lon"], p.get("dx", 0), p.get("dy", 0),
+                                                p.get("anchor", "lm"), p.get("bold", False))
         if view.contains(lat, lon):
             x, y = view.xy(lat, lon)
-            bold = name == "The Wedge"
             size = 12 if bold else 11
             r = label_rect((x + dx, y + dy), name, size, anchor, bold)
             if not busy(r):
@@ -348,16 +368,16 @@ def draw_names(c: InkCanvas, data: dict[str, Any], view: View, blocked: list[Rec
     for island in data["islands"]:
         if view.contains(island["lat"], island["lon"]):
             name = island["name"]
-            dx, dy = ISLAND_NUDGE.get(name, (0, 0))
+            dx, dy = nudges.get(name, (0, 0))
             x, y = view.xy(island["lat"], island["lon"])
-            size = 12 if name in BOLD_ISLANDS else 11
-            lines = ISLAND_LINES.get(name, (name,))
+            size = 12 if name in bold_islands else 11
+            lines = island_lines.get(name, (name,))
             spots = [(x + dx, y + dy + (i - (len(lines) - 1) / 2) * (size + 1)) for i in range(len(lines))]
-            rects = [label_rect(at, line, size, "mm", name in BOLD_ISLANDS) for at, line in zip(spots, lines)]
+            rects = [label_rect(at, line, size, "mm", name in bold_islands) for at, line in zip(spots, lines)]
             if any(busy(r) for r in rects):
                 continue
             for at, line in zip(spots, lines):
-                label(c, at, line, size, bold=name in BOLD_ISLANDS, anchor="mm")
+                label(c, at, line, size, bold=name in bold_islands, anchor="mm")
             taken += rects
     return taken
 
@@ -857,12 +877,13 @@ def draw_rose(c: InkCanvas, m: DayModel, rim: Rim, rx: int, ry: int, rr: int) ->
 # --- title block and the frame ----------------------------------------------------------------
 
 
-def draw_block(c: InkCanvas, m: DayModel, rect: Rect) -> None:
+def draw_block(c: InkCanvas, m: DayModel, rect: Rect, name: str = "") -> None:
     x0, y0, x1, y1 = (int(v) for v in rect)
     mid = (x0 + x1) / 2
     c.draw.rectangle([x0, y0, x1, y1], fill=WHITE, outline=BLACK)
     c.draw.rectangle([x0 + 3, y0 + 3, x1 - 3, y1 - 3], outline=BLACK)
-    label(c, (mid, y0 + 21), "NEWPORT BAY", 22, bold=True, anchor="mm")
+    if name:
+        label(c, (mid, y0 + 21), name, 22, bold=True, anchor="mm")
     when = f"{m.now:%A, %B} {m.now.day} · {nice_time(m.now)}"
     if text_width(when, font(12)) > x1 - x0 - 12:
         when = f"{m.now:%A, %b} {m.now.day} · {nice_time(m.now)}"
@@ -928,7 +949,7 @@ ROSE = (98, MAP_H - 94, 70)
 
 
 def draw_all(c: InkCanvas, m: DayModel, data: dict[str, Any], settings: HarborSettings) -> None:
-    view = make_view(settings, data["bounds"])
+    view = make_view(settings, data["bounds"], place_view(data))
     the_map = draw_map(c, data, view, tide_now(m))
 
     rx, ry, rr = ROSE
@@ -939,7 +960,7 @@ def draw_all(c: InkCanvas, m: DayModel, data: dict[str, Any], settings: HarborSe
     draw_on_water(c, m, data, view, the_map, taken, SWELL_AT)
     draw_border(c, view, MAP_H)
     draw_rose(c, m, rim, rx, ry, rr)
-    draw_block(c, m, BLOCK)
+    draw_block(c, m, BLOCK, title(data))
     c.draw.rectangle([0, MAP_H, W - 1, H - 1], fill=WHITE, outline=BLACK)
     if m.tide is None:
         return
@@ -951,7 +972,7 @@ def draw_all(c: InkCanvas, m: DayModel, data: dict[str, Any], settings: HarborSe
 
 def render(scene: Scene, ctx: SceneContext) -> np.ndarray:
     m = day_model(scene.draw_for, ctx)
-    data = load_harbor(ctx.data_dir)
+    data = harbor_data(ctx)
     c = InkCanvas((W, H), "white")
     draw_all(c, m, data, ctx.config.harbor)
     full = c.indices()

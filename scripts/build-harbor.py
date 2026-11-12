@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Mac only: build data/harbor.json, the map behind the harbor chart (`scenes/harbor.py`).
+"""Mac only: build data/places/wedge/harbor.json, the map behind the harbor chart (`scenes/harbor.py`).
 
 From an Overpass (OpenStreetMap) response and NOAA ENC soundings: the ocean coastline
 chained, the harbor multipolygon, other water, marsh and beach polygons, piers and
@@ -315,7 +315,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--fetch", action="store_true", help="download whatever isn't given")
     p.add_argument("--save-dir", type=Path, help="keep the downloads here")
     p.add_argument("--fetched", default=date.today().isoformat(), help="the date for the `fetched` field")
-    p.add_argument("-o", "--output", type=Path, default=Path(__file__).parent.parent / "data" / "harbor.json")
+    p.add_argument("-o", "--output", type=Path, default=Path(__file__).parent.parent / "data" / "places" / "wedge" / "harbor.json")
     args = p.parse_args(argv)
 
     if args.osm:

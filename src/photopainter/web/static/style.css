@@ -296,6 +296,7 @@ main { max-width: 640px; margin: 0 auto; }
   background: var(--accent); border-color: var(--accent); color: var(--on-accent);
 }
 .segments .seg > button.working { opacity: .6; }
+.segments .seg.unavailable > button { opacity: .4; cursor: default; }
 /* a small eye on the screens you can look at before pinning them */
 .eye {
   position: absolute; top: 3px; right: 3px; width: 28px; height: 28px;

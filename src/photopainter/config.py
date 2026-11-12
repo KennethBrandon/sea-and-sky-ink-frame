@@ -24,7 +24,7 @@ import json
 import logging
 import math
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field, replace
 from datetime import time
 from pathlib import Path
@@ -133,10 +133,15 @@ class Schedule:
         return any(s.screen == "photo" for s in self.day + self.night)
 
     def without_photos(self) -> Schedule:
-        """This schedule when there's no photo to show: each rotation keeps its cycle, so
-        the other steps still change when they would have."""
-        return replace(self, day=_without_photos(self.day, "tides"),
-                       night=_without_photos(self.night, "sky"))
+        """This schedule when there's no photo to show."""
+        return self.without(("photo",))
+
+    def without(self, screens: Iterable[str]) -> Schedule:
+        """This schedule without steps of `screens` (nothing to show, or no data for this place,
+        screens.py): each rotation keeps its cycle, so the other steps still change when they
+        would have."""
+        drop = frozenset(screens)
+        return replace(self, day=_without(self.day, drop, "tides"), night=_without(self.night, drop, "sky"))
 
 
 @dataclass(frozen=True)
@@ -218,9 +223,10 @@ class Photos:
 @dataclass(frozen=True)
 class Harbor:
     """The harbor chart (`scenes/harbor.py`): what the map above the tide band shows. Its
-    width follows from its shape; a view past what `data/harbor.json` covers is fitted back inside it."""
+    width follows from its shape; a view past what the place's chart covers is fitted back
+    inside it, and one that misses it altogether takes the place's own view (places.py)."""
 
-    south: float = 33.5835  # low enough to keep the safe-water buoy on the map
+    south: float = 33.5835  # the Wedge's: low enough to keep the safe-water buoy on the map
     north: float = 33.61575
     center_lon: float = -117.9015
     chart_days_behind: float = 1.0  # the tide band: its own span and labels, apart from the day screen's
@@ -510,9 +516,9 @@ def validate(data: dict) -> Config:
                                                      "chart_days_ahead", "label_tides", "label_times", "label_heights"))
     behind, ahead = _chart_span(c, s, "harbor", d.harbor.chart_days_behind, d.harbor.chart_days_ahead)
     harbor = Harbor(
-        south=c.number(s, "harbor", "south", d.harbor.south, 33.54, 33.70),
-        north=c.number(s, "harbor", "north", d.harbor.north, 33.54, 33.70),
-        center_lon=c.number(s, "harbor", "center_lon", d.harbor.center_lon, -118.02, -117.78),
+        south=c.number(s, "harbor", "south", d.harbor.south, -90, 90),
+        north=c.number(s, "harbor", "north", d.harbor.north, -90, 90),
+        center_lon=c.number(s, "harbor", "center_lon", d.harbor.center_lon, -180, 180),
         chart_days_behind=behind,
         chart_days_ahead=ahead,
         label_tides=c.choice(s, "harbor", "label_tides", d.harbor.label_tides, TIDE_LABELS),
@@ -676,14 +682,14 @@ def _fit_steps(steps: tuple[Step, ...]) -> tuple[Step, ...]:
     return (*kept[:-1], replace(kept[-1], minutes=min(kept[-1].minutes + extra, 1440)))
 
 
-def _without_photos(steps: tuple[Step, ...], fallback: ScreenKind) -> tuple[Step, ...]:
-    """A rotation with its photo steps gone and the same cycle: the step before a photo runs
-    on through it, and a photo at the start gives its time to the first screen after it. A
-    rotation of only photos becomes one step of `fallback` for the whole cycle."""
+def _without(steps: tuple[Step, ...], drop: frozenset[str], fallback: ScreenKind) -> tuple[Step, ...]:
+    """A rotation with its steps of `drop` gone and the same cycle: the step before one runs
+    on through it, and one at the start gives its time to the first screen after it. A
+    rotation of nothing else becomes one step of `fallback` for the whole cycle."""
     kept: list[Step] = []
     lead = 0
     for step in steps:
-        if step.screen != "photo":
+        if step.screen not in drop:
             kept.append(replace(step, minutes=step.minutes + lead))
             lead = 0
         elif kept:

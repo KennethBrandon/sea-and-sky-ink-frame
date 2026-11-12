@@ -8,6 +8,7 @@ tests and the Mac use:
 | config    | ~/.config/photopainter/config.json    | PHOTOPAINTER_CONFIG       |
 | state dir | ~/.cache/photopainter/                | PHOTOPAINTER_STATE_DIR    |
 | data dir  | <repo>/data/                          | PHOTOPAINTER_DATA_DIR     |
+| places    | `places/` beside the config file      | PHOTOPAINTER_PLACES_DIR   |
 
 All JSON writes go through `write_json` / `update_json`: the data is written to a temp file
 in the same folder, flushed to disk, then renamed over the old file, so a reader (or a
@@ -41,6 +42,7 @@ REPO_DIR = Path(__file__).resolve().parents[2]  # src/photopainter/state.py -> r
 CONFIG_ENV = "PHOTOPAINTER_CONFIG"
 STATE_DIR_ENV = "PHOTOPAINTER_STATE_DIR"
 DATA_DIR_ENV = "PHOTOPAINTER_DATA_DIR"
+PLACES_DIR_ENV = "PHOTOPAINTER_PLACES_DIR"
 
 # File names inside the state dir (PRD.md §5). The first two already exist and are
 # written by hardware/panel.py and slideshow.py.
@@ -74,6 +76,14 @@ def state_dir() -> Path:
 def data_dir() -> Path:
     """Bundled data (fonts, stars, ephemeris): $PHOTOPAINTER_DATA_DIR, or <repo>/data/."""
     return _env_path(DATA_DIR_ENV) or REPO_DIR / "data"
+
+
+def places_dir() -> Path:
+    """Place data built for this frame (places.py): $PHOTOPAINTER_PLACES_DIR, or `places/`
+    beside the config file (~/.config/photopainter/places/ on the Pi), where a deploy doesn't
+    reach. Following the config keeps tests, which point it at a temp folder, away from the
+    Mac's own. Not created here."""
+    return _env_path(PLACES_DIR_ENV) or config_path().parent / "places"
 
 
 # --- timestamps ----------------------------------------------------------------

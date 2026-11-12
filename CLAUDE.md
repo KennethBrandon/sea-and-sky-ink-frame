@@ -106,6 +106,11 @@ src/photopainter/
   buttons.py        # `photopainter buttons`: presses into actions (Decoder); forward and back
                     #   through the schedule or, in photos only, the photos; its own service,
                     #   since low power stops the dashboard
+  screens.py        # which screens can be shown here: missing() (no harbor chart for this place),
+                    #   schedule_here(): the rotations without them, for the tick, buttons and dashboard
+  places.py         # place data (PRD §9): skyline, harbor chart, jetty, matched by location from
+                    #   ~/.config/photopainter/places/ then data/places/; none = open horizon,
+                    #   no jetty, no harbor chart
   hotspot.py        # no Wi-Fi: whether the frame is on it (link_up), when the mark is due, the
                     #   setup hotspot's steps (advance -> Outcome), Nmcli on the Pi, FakeNetwork
   astro/            # Skyfield, loaded lazily; ephemeris = data/de421.bsp, no downloads
@@ -188,22 +193,24 @@ src/photopainter/
                     #   data credit and software license; data/README.md)
 data/               # fonts/ (DejaVu Sans + license), README.md (sources and licenses),
                     #   de421.bsp (gitignored link, from scripts/fetch-ephemeris.sh),
-                    #   stars.json, constellations.json, milkyway.png, skyline.json (sky),
-                    #   harbor.json (the harbor chart's map and soundings)
+                    #   stars.json, constellations.json, milkyway.png (sky); places/wedge/: the
+                    #   Wedge's skyline.json, harbor.json (the chart's map and soundings) and
+                    #   place.json (names, the jetty: choices made by hand), see places.py
 config.example.json # the default config (a test keeps it equal to default_config())
 tests/              # pytest, runs on the Mac with no hardware and no network
   fixtures/         #   recorded NOAA / Open-Meteo responses (noaa_*, openmeteo_*), and
                     #   tides/weather/surf/gauge.json: caches in PRD §5 format (real, 2026-11-03);
-                    #   horizons_altaz.json (JPL reference positions), stars_small.json
+                    #   horizons_altaz.json (JPL reference positions), stars_small.json,
+                    #   golden_wedge.json (hashes of the Wedge's screens, test_golden.py)
 scripts/
   flash-sd.sh       # Mac: flash + preconfigure an SD card (cloud-init, apt packages)
   fetch-ephemeris.sh # Mac: download de421.bsp once to ~/.cache/photopainter-dev/, link
                     #   it into data/ (run once per checkout or worktree)
   build-star-data.py # Mac: rebuild stars.json, constellations.json, milkyway.png from
                     #   pinned HYG / Stellarium / ESO files (only to change sources)
-  build-skyline.py  # Mac: rebuild skyline.json (Catalina from the Wedge) from DEM data
+  build-skyline.py  # Mac: rebuild places/wedge/skyline.json (Catalina from the Wedge) from DEM data
   sea-playground.py # Mac: try the sea screen's look live, a slider for every SeaStyle number
-  build-harbor.py   # Mac: rebuild harbor.json from an Overpass response and NOAA ENC soundings
+  build-harbor.py   # Mac: rebuild places/wedge/harbor.json from an Overpass response and NOAA ENC soundings
                     #   (saved files, or --fetch)
   analyze-card.py   # Mac: measure the inks from photos of the color test card
   build-readme-images.py # Mac: redraw README.md's pictures (docs/images/) with the frame's own code,
@@ -383,6 +390,11 @@ anything off-palette was drawn. `render_scene` checks every screen's size and in
   `SSL_CERT_FILE=/etc/ssl/cert.pem` (the Pi's Debian Python uses the system store).
 - Use type hints and small modules. Write pytest tests for everything that doesn't need
   hardware, and fake the `hardware/` interfaces in tests.
+- `tests/test_golden.py` holds every approved screen to its pixels with the default config (the
+  Wedge): fifteen screens and moments, drawn from the fixture caches, each a hash of its ink
+  indices. A failure saves the new picture and names it. Re-record (`.venv/bin/python
+  tests/test_golden.py`) only for a change the Owner approved over previews, never in the same
+  commit as a refactor. The hashes depend on the Pillow and NumPy versions the file notes.
 - Copy upstream Waveshare code into `hardware/` with the upstream commit noted in the file
   header. Don't use a git submodule, and don't modify copied files beyond what's needed.
 
@@ -534,7 +546,7 @@ These are enforced in `hardware/panel.py`; keep them that way.
   its rim and the Sun and Moon at their azimuths now, a scale bar and lat/lon ticks. It isn't in
   the default rotation: add it on the dashboard, or pin it. Choices since the mockup, all the
   Owner's (2026-11-04): the map's bounds are settings (`harbor.south`, `north`, `center_lon`,
-  for the map above the band; the width follows; `data/harbor.json` covers 33.54-33.70 N, 118.02-117.78 W and a view past
+  for the map above the band; the width follows; the Wedge's `data/places/wedge/harbor.json` covers 33.54-33.70 N, 118.02-117.78 W and a view past
   that is fitted back inside), with the default south edge lowered so the NWP safe-water buoy
   shows bottom right; the tide in a band along the bottom (chosen over a box in the title block and one over the
   ocean, from previews), by default 24 h back to 4 days ahead: the day screen's `tide_chart` at a
@@ -579,7 +591,10 @@ These are enforced in `hardware/panel.py`; keep them that way.
   layout is a first design, picked from previews on the Mac and not judged on the panel yet. 0.8 s to
   render on the Mac against 0.6 s for the sky, 67 MB peak against 76 MB; not timed on the Pi.
   Side by side, the sky keeps its twilight after sunset while the sea goes dark as soon as the
-  Sun is down, which is how each full screen already behaves.
+  Sun is down, which is how each full screen already behaves. Where the place has no harbor chart
+  (Owner, 2026-11-08), its quarter shows the photo the rotation is on, dithered for that size
+  (`photo.current`, `render_at`); with no photo either, the sea runs across the whole bottom row,
+  reaching twice as far either side at the same size.
 
 ## Power and battery rules
 
