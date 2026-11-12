@@ -222,6 +222,7 @@ deploy/systemd/       ★photopainter-tick.{service,timer}, ★photopainter-web.
 | D13 | Help on the dashboard is words and a labelled drawing, with nothing to press | The Owner tried on-screen buttons that really pressed and found it confusing that they worked. |
 | D14 | No Wi-Fi: normal screens and a small mark, and a setup hotspot only when someone holds the Back button | An outage must never need anyone. The radio can't look for the home network while a hotspot is up, so one that started by itself would slow the frame's own recovery. Built on NetworkManager rather than `comitup`, which would bring a second web page for port 80 and its own control of the radio. |
 | D15 | Default schedule (2026-11-08): by day every screen for 10 minutes an hour, a photo at :00, then tides, harbor, sky, sea and the combo at :50; by night the sky alone, hourly | The old default, `[photo 10, tides 50]`, dates from when there were two screens. This is the rotation the Owner runs on the frame: every screen comes round once an hour, a photo starts each hour and the combo, all four at once, ends it. The cost is 6 refreshes an hour by day, each a 30-second flash. The night stays the approved sky, one refresh an hour while people sleep (Owner's choice). A config saved from the dashboard keeps its own rotations; only a file without `schedule.day` gets the new one, and an old file's `schedule.photo` rule still loads as `[photo 10, tides 50]`. |
+| D16 | *(planned, M4)* Sleep between screen changes by cutting the power, woken by the RTC alarm through a latch mod. A mode switch: on = awake with Wi-Fi and the dashboard, off = low power (sleep on the pack, Wi-Fi only in data windows). A button shows the next screen, waking the frame if it has to. | The board can't wake the Pi on its own; the mod is a handful of starter-kit parts and a few wires. A physical switch is clearer than rules about USB power, and the button gives the Viewer a way to see the next photo. Chosen 2026-11-05. |
 
 ## 5. Contracts
 
@@ -850,14 +851,107 @@ reflection-free RAW photo, for a better green.
   the cell. Full run-down 2026-11-07 (`docs/hardware.md`): 10 h 42 min, cut out at 3.00 V,
   so `battery.low_volts` went from 3.2 V to 3.3 V; about 2.07 A charging from flat.
 
+### M4: Battery frame: wake on RTC (planned 2026-11-05, after M3)
+
+**Goal:** weeks on the pack, by being off between screen changes. The board as built can't
+wake the Pi (`docs/hardware.md` "Can the Pi wake itself?"), so this needs a small latch
+mod: the DS3231's alarm output and a Pi "hold" pin, joined to the power switch's
+transistor (`docs/hardware.md` "The latch mod"). The Owner chose to plan it knowing it
+trades the cord for a charge every week or two; whether the Viewer's frame runs this way
+at all is Q11. Until B2 and B3 are done, nothing changes: `power.mode` stays `always_on`.
+
+**The wake cycle** (`photopainter tick --wake`, run by `photopainter-wake.service` at
+boot when `power.mode` is `wake`):
+
+1. First thing, set a fallback alarm an hour ahead, so a crash later still ends in sleep.
+2. Why awake? The RTC's alarm flag is pending → the alarm. Not pending and the mode
+   switch is on → the switch. Neither, on battery → the next button. Neither, on USB → the
+   power came back. `status.json` records it (`wake`: `alarm` / `switch` / `button` /
+   `usb`). A button wake shows the next screen instead of what the schedule says.
+3. Decide and draw exactly as the timer's tick does. The panel's refresh guard never
+   blocks across boots, and the clock is right from boot thanks to the kernel RTC driver.
+4. On a **data wake** (every `power.data_every_hours`, or sooner if a cache is older
+   than that or the clock is untrusted): Wi-Fi on, up to 60 s for a connection, fetch,
+   let NTP correct the clock and the RTC, Wi-Fi off. Image wakes never touch Wi-Fi.
+5. Set the alarm for the sooner of the next schedule change and the next data wake,
+   write `sleeping_until` to `status.json`, sync, `systemctl poweroff`. The kernel's
+   `gpio-poweroff` overlay drops the hold pin at the very end, and the power with it.
+
+**The mode switch and the next button** (Owner, 2026-11-05; wiring in
+`docs/hardware.md` "The latch mod"):
+
+- **Switch on: awake.** Wi-Fi up, the dashboard running, the minute timer ticking, as
+  today. It never sleeps, on USB or on the pack (the dashboard warns when the pack runs
+  low). Flipping it on while the frame sleeps powers it on.
+- **Switch off: low power.** Wi-Fi and the dashboard are off except during a data window
+  every `power.data_every_hours`. On the pack, the frame powers off between screen
+  changes (the wake cycle above). On USB power it stays powered, since sleeping would
+  save nothing, and just changes screens on schedule.
+- **The button: the next screen, now.** Asleep, a press powers the frame on and it
+  shows the next step of the rotation (a photo step means the next photo) for that
+  step's usual time, then sleeps again. Awake, on USB or with the switch on, the same
+  press just changes the screen. `photopainter next` and the dashboard's Next do the
+  same thing.
+- `/boot/firmware/photopainter-stay-awake` still forces awake, whatever the switch says,
+  and so does `power.mode` `always_on`, the default. An unmodified board must never try
+  to sleep: it would only halt and sit dark (CLAUDE.md "Power and battery rules").
+
+**Numbers** (from the 2026-11-05 readings): a wake is about 70 s (boot without Wi-Fi
+~20 s, draw, the 30 s refresh, shutdown ~10 s) at about 0.3 A, so about 6 mAh. Today's
+schedule is about 38 wakes a day (photo on and off hourly by day, the sky hourly at
+night): about 8 days on 2000 mAh. Photos and tides every 2 hours: about 20 wakes a day,
+about 2 weeks. The off-state draw (the charger's quiescent current, the RTC on its coin
+cell, the latch parts) should be well under 1 mA; B5 measures it.
+
+**Config (planned):** `power: {"mode": "always_on", "data_every_hours": 2}`, where
+`mode` is `always_on` (the board as built) or `switch` (the latch mod is in: follow the
+mode switch and the button, on BCM 6 and BCM 5).
+
+| ID | Task | Depends on | Status |
+|---|---|---|---|
+| B1 | Coin cell, kernel RTC driver with `wakeup-source`, and a bench test that the alarm pulls INT low with the board off (H2, extended) | coin cell | todo |
+| B2 | The latch mod: parts, solder, test (alarm turns it on; hold pin low turns it off; the switch still works) | B1 | todo |
+| B3 | `hardware/rtc.py` (set/clear the alarm, the wake reason), `hardware/buttons.py` (the mode switch and the next button) and the wake cycle in the tick; `photopainter-wake.service` and a small button-listener service; the `config.txt` lines in `flash-sd.sh`; tests with fakes | B1 | todo |
+| B4 | Dashboard: the mode (awake / low power), sleeping until, last wake and why, wakes and mAh per day; a Next button | B3 | todo |
+| B5 | Measure mAh per wake, the off-state draw and days per charge; settle the cadence (Q12) | B2, B3 | todo |
+
+- **B1:** `dtoverlay=i2c-rtc,ds3231,wakeup-source` (without `wakeup-source` the driver
+  offers no alarm when no interrupt line is wired), drop `fake-hwclock`, `hwclock -w` once
+  NTP has set the clock. The driver reports a pending alarm through `RTC_WKALM_RD` and
+  clears the flag when the next alarm is set. It also sets the chip's BBSQW bit at
+  probe, without which the alarm pin is high impedance on battery power (datasheet;
+  `docs/hardware.md` "The latch mod"), so the bench test needs the driver loaded. Bench
+  test before any soldering: coin cell in, set an alarm two minutes ahead through
+  `/sys/class/rtc/rtc0/wakealarm`, switch the board off, and watch the R18 pad with a
+  meter through a 100 kΩ pull-up to the pack's + (the board's own pull-up on INT is dead
+  when the board is off). If INT doesn't go low on VBAT, M4 stops here.
+- **B2:** the circuit is in `docs/hardware.md`. Parts, all from the Owner's RexQualis
+  starter kit: two PN2222 transistors, two 1N4007 diodes, two 100 kΩ and one 10 kΩ, built
+  on the kit's breadboard first and then on a scrap of the Owner's perfboard; solder
+  points: the unfitted R18 (INT), the unfitted R19 (BCM 26, the hold pin), the two pads of
+  the switch Key1 (SYS and the gate node), and ground.
+- **B3:** the wake cycle above, as a second entry point beside the timer's tick, sharing
+  everything after the clock check. Fakes for the RTC and the power-off so the cycle is
+  tested on the Mac. The hold pin is set by the firmware (`gpio=26=op,dh` in
+  `config.txt`), before the kernel: the alarm flag stays set, and INT low, until the
+  driver touches it, which is later.
+- **B3, the button and switch:** while awake, a listener (gpiozero, debounced) turns a
+  press into a Next override and starts a tick, and reacts to the switch flipping off by
+  starting the sleep cycle. Asleep, both act through the latch; the wake cycle reads the
+  wake reason first. A press during a wake cycle may be missed; that's acceptable.
+- **Done** means: a week on the pack at the chosen cadence with no help, the dashboard
+  reachable within a minute of flipping the switch on, the button changing the screen
+  within about a minute asleep and at once awake, and plugging USB in with the switch on
+  behaving as the frame does today.
+
 ### Backlog (not v1)
 
 - Nearshore surf height at the Wedge (for example CDIP's MOP model) instead of offshore swell.
 - Cloud relay so the dashboard shows "last seen" while the frame is offline.
 - Dashboard PIN, required before any public exposure.
 - Perceptual (Lab) dithering for photos.
-- Sleeping on the battery between updates: answered on 2026-11-04, the board can't wake
-  the Pi (`docs/hardware.md`), so it would take a hardware mod. Not planned.
+- ~~Sleeping on the battery between updates~~: planned as M4 (2026-11-05), with the
+  hardware mod it needs.
 
 ## 7. Working agreement for agents
 
@@ -910,6 +1004,9 @@ reflection-free RAW photo, for a better green.
 | Q8 | Where it hangs and how lit the room is at night (e-ink has no backlight) | S2 design, expectations |
 | Q9 | Tailscale account to use | H1 |
 | Q10 | ~~Keep the weather/calendar idea?~~ Weather is on the day screen; no calendar (2026-11-03) | T1, T2 |
+| Q11 | Does the Viewer's frame run on the pack (a charge every week or two), or stay plugged in with the pack as a UPS? | M4 scope |
+| Q12 | Cadence on the pack: photos and tides every 2 hours instead of hourly? The night sky every 2 hours? | B5 |
+| Q13 | Where the latch parts sit (a scrap of perfboard by the switch?) and who solders | B2 |
 
 ## 9. Any coast (a plan, 2026-11-08; not approved yet)
 

@@ -1,0 +1,136 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-90 0 1040 620" width="1040" height="620" font-family="Helvetica, Arial, sans-serif" font-size="14">
+  <title>PhotoPainter latch mod: wake on the RTC alarm, the mode switch or the next button</title>
+  <rect x="-90" width="1040" height="620" fill="#ffffff"/>
+  <defs>
+    <marker id="dot" markerWidth="6" markerHeight="6" refX="3" refY="3"><circle cx="3" cy="3" r="3" fill="#000"/></marker>
+  </defs>
+  <g stroke="#000" stroke-width="2" fill="none">
+    <!-- SYS rail -->
+    <line x1="60" y1="60" x2="800" y2="60"/>
+    <!-- GND rail -->
+    <line x1="60" y1="540" x2="800" y2="540"/>
+    <!-- INT line -->
+    <line x1="60" y1="220" x2="300" y2="220"/>
+    <!-- R1 100k: SYS to INT -->
+    <line x1="150" y1="60" x2="150" y2="90"/>
+    <rect x="138" y="90" width="24" height="60" fill="#fff"/>
+    <line x1="150" y1="150" x2="150" y2="220"/>
+    <!-- R2 10k: INT to Qa base -->
+    <rect x="220" y="208" width="60" height="24" fill="#fff"/>
+    <line x1="280" y1="220" x2="320" y2="220"/>
+    <!-- Qa -->
+    <circle cx="340" cy="220" r="26" fill="#fff"/>
+    <line x1="320" y1="200" x2="320" y2="240"/>
+    <line x1="320" y1="212" x2="345" y2="196"/>
+    <line x1="320" y1="228" x2="345" y2="244"/>
+    <polygon points="345,244 335,241 340,234" fill="#000"/>
+    <line x1="345" y1="196" x2="345" y2="60"/>
+    <polyline points="345,244 345,300 420,300 420,540"/>
+    <!-- R3 100k: SYS to node A, drawn on Qa's collector line -->
+    <rect x="333" y="100" width="24" height="60" fill="#fff"/>
+    <!-- node A to Qb base -->
+    <line x1="345" y1="178" x2="470" y2="178"/>
+    <circle cx="345" cy="178" r="3.5" fill="#000"/>
+    <!-- Qb -->
+    <circle cx="490" cy="178" r="26" fill="#fff"/>
+    <line x1="470" y1="158" x2="470" y2="198"/>
+    <line x1="470" y1="170" x2="495" y2="154"/>
+    <line x1="470" y1="186" x2="495" y2="202"/>
+    <polygon points="495,202 485,199 490,192" fill="#000"/>
+    <line x1="495" y1="154" x2="495" y2="60"/>
+    <line x1="495" y1="202" x2="495" y2="250"/>
+    <!-- D1: Qb emitter to GATE -->
+    <polygon points="483,250 507,250 495,274" fill="#fff"/>
+    <line x1="483" y1="274" x2="507" y2="274"/>
+    <line x1="495" y1="274" x2="495" y2="320"/>
+    <!-- GATE line -->
+    <line x1="495" y1="320" x2="800" y2="320"/>
+    <circle cx="495" cy="320" r="3.5" fill="#000"/>
+    <!-- D2: HOLD to GATE -->
+    <line x1="800" y1="400" x2="700" y2="400"/>
+    <polygon points="700,388 700,412 676,400" fill="#fff"/>
+    <line x1="676" y1="388" x2="676" y2="412"/>
+    <line x1="676" y1="400" x2="640" y2="400"/>
+    <line x1="640" y1="400" x2="640" y2="320"/>
+    <circle cx="640" cy="320" r="3.5" fill="#000"/>
+    <!-- D3: INT to switch node -->
+    <line x1="100" y1="220" x2="100" y2="260"/>
+    <circle cx="100" cy="220" r="3.5" fill="#000"/>
+    <polygon points="88,260 112,260 100,284" fill="#fff"/>
+    <line x1="88" y1="284" x2="112" y2="284"/>
+    <line x1="100" y1="284" x2="100" y2="400"/>
+    <circle cx="100" cy="400" r="3.5" fill="#000"/>
+    <!-- switch -->
+    <line x1="100" y1="400" x2="100" y2="430"/>
+    <line x1="100" y1="430" x2="118" y2="480"/>
+    <line x1="100" y1="490" x2="100" y2="540"/>
+    <circle cx="100" cy="430" r="3" fill="#000"/>
+    <circle cx="100" cy="490" r="3" fill="#000"/>
+    <line x1="100" y1="400" x2="200" y2="400"/>
+    <!-- D4: INT to button node -->
+    <line x1="200" y1="220" x2="200" y2="260"/>
+    <circle cx="200" cy="220" r="3.5" fill="#000"/>
+    <polygon points="188,260 212,260 200,284" fill="#fff"/>
+    <line x1="188" y1="284" x2="212" y2="284"/>
+    <line x1="200" y1="284" x2="200" y2="440"/>
+    <circle cx="200" cy="440" r="3.5" fill="#000"/>
+    <!-- button -->
+    <line x1="200" y1="440" x2="200" y2="455"/>
+    <line x1="186" y1="450" x2="214" y2="450"/>
+    <line x1="200" y1="500" x2="200" y2="540"/>
+    <circle cx="200" cy="462" r="3" fill="#000"/>
+    <circle cx="200" cy="492" r="3" fill="#000"/>
+    <line x1="200" y1="440" x2="290" y2="440"/>
+    <!-- rail dots -->
+    <circle cx="150" cy="60" r="3.5" fill="#000"/>
+    <circle cx="345" cy="60" r="3.5" fill="#000"/>
+    <circle cx="495" cy="60" r="3.5" fill="#000"/>
+    <circle cx="420" cy="540" r="3.5" fill="#000"/>
+    <circle cx="100" cy="540" r="3.5" fill="#000"/>
+    <circle cx="200" cy="540" r="3.5" fill="#000"/>
+    <circle cx="150" cy="220" r="3.5" fill="#000"/>
+  </g>
+  <g fill="#000">
+    <text x="60" y="48" font-weight="bold">SYS</text>
+    <text x="110" y="48">battery rail: the power switch's SYS pad</text>
+    <text x="60" y="566" font-weight="bold">GND</text>
+    <text x="110" y="566">ground: any ground pad</text>
+    <text x="36" y="214" font-weight="bold" text-anchor="end">INT</text>
+    <text x="36" y="232" text-anchor="end" font-size="12">R18 pad, RTC side</text>
+    <text x="166" y="124">R1</text>
+    <text x="166" y="140">100 kΩ</text>
+    <text x="228" y="200">R2  10 kΩ</text>
+    <text x="361" y="124">R3</text>
+    <text x="361" y="140">100 kΩ</text>
+    <text x="372" y="226" font-weight="bold">Qa</text>
+    <text x="372" y="244" font-size="12">PN2222</text>
+    <text x="522" y="184" font-weight="bold">Qb</text>
+    <text x="522" y="202" font-size="12">PN2222</text>
+    <text x="515" y="266">D1  1N4007</text>
+    <text x="806" y="314" font-weight="bold">GATE</text>
+    <text x="806" y="332" font-size="12">Key1 pad,</text>
+    <text x="806" y="347" font-size="12">gate side</text>
+    <text x="806" y="394" font-weight="bold">HOLD</text>
+    <text x="806" y="412" font-size="12">BCM 26</text>
+    <text x="806" y="427" font-size="12">(R19 pad)</text>
+    <text x="690" y="384">D2  1N4007</text>
+    <text x="116" y="276">D3</text>
+    <text x="116" y="292" font-size="12">1N4007</text>
+    <text x="216" y="276">D4</text>
+    <text x="216" y="292" font-size="12">1N4007</text>
+    <text x="206" y="394">to BCM 6 (pin 31)</text>
+    <text x="206" y="410" font-size="12">low = awake mode</text>
+    <text x="296" y="434">to BCM 5 (pin 29)</text>
+    <text x="296" y="450" font-size="12">low = pressed</text>
+    <text x="126" y="470">mode</text>
+    <text x="126" y="486">switch</text>
+    <text x="224" y="484">next</text>
+    <text x="224" y="500">button</text>
+    <text x="430" y="482" font-size="12">Qa and Qb: flat face toward you, legs down: E  B  C left to right</text>
+    <text x="430" y="500" font-size="12">Qa: E to GND, B from R2, C up to R3 and Qb's base</text>
+    <text x="430" y="518" font-size="12">Qb: C to SYS, B from Qa's collector, E down into D1</text>
+    <text x="430" y="536" font-size="12">Diodes: the band is the cathode, the end the arrow points to</text>
+    <text x="-70" y="590" font-size="12" fill="#444">PhotoPainter latch mod (PRD M4, planned). The alarm, the switch or the button pulls INT low; Qa turns off, Qb pulls GATE up and the frame powers on.</text>
+    <text x="-70" y="608" font-size="12" fill="#444">The Pi then holds itself on through HOLD (BCM 26 high from power-up) and lets go at the end of a shutdown, which cuts the power.</text>
+  </g>
+</svg>

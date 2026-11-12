@@ -698,9 +698,16 @@ and the frame stays plugged in (PRD.md D1). What's built:
 - Before plugging a pack in: single-cell 3.7 V Li-ion only, and check the connector's
   polarity against the board (pin 1 is +). Nothing on the board survives a reversed cell.
 - The percent is a guess from the voltage. The current and the state are what to trust.
-- If sleeping between updates ever comes back (a hardware mod), the old rules still apply:
-  **never let shutdown logic lock us out.** Skip it on USB power, when a
-  `/boot/firmware/photopainter-stay-awake` file exists, and in the first minutes after boot.
+- Sleeping between screen changes is planned (PRD.md M4, 2026-11-05): a latch mod joins
+  the RTC alarm and a Pi hold pin (BCM 26) to the power switch's transistor
+  (`docs/hardware.md` "The latch mod"), a mode switch (BCM 6: on = awake with Wi-Fi and
+  the dashboard, off = low power) and a next-screen button (BCM 5) that can wake the
+  frame; a wake mode in the tick draws, sets the next alarm and powers off, with Wi-Fi
+  only on data wakes every 2 hours. Nothing of it is built; `power.mode` will default to
+  `always_on`, and an unmodified board must never try to sleep: it would only halt and
+  sit dark. When it is built, the old rules still apply: **never let shutdown logic lock
+  us out.** Stay on when the mode switch is on, when a
+  `/boot/firmware/photopainter-stay-awake` file exists, and while the dashboard is in use.
 
 ## Open questions
 
