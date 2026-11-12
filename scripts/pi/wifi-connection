@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# Save or forget a Wi-Fi network on the Pi. Runs as root, started by the dashboard
+# (web/wifi.py) with `sudo -n`. A password never appears in an argument (`ps` would show
+# it): `add` reads a whole NetworkManager keyfile from stdin.
+#
+#   wifi-connection add STEM     stdin: the keyfile. Writes it with mode 0600 as
+#                                /etc/NetworkManager/system-connections/STEM.nmconnection,
+#                                loads it and prints the profile's uuid. NetworkManager keeps
+#                                the connection it has; it joins the new one when it's the
+#                                one in range.
+#   wifi-connection remove UUID  Deletes that saved profile (and its file), unless the frame
+#                                is connected through it.
+#
+# Errors go to stderr with a non-zero exit. Nothing from stdin is ever printed.
+set -euo pipefail
+
+dir=/etc/NetworkManager/system-connections
+cmd=${1:-}
+arg=${2:-}
+
+case $cmd in
+  add)
+    [[ $arg =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$ ]] || { echo "bad file name: $arg" >&2; exit 2; }
+    file=$dir/$arg.nmconnection
+    [[ -e $file ]] && { echo "a profile file named $arg already exists" >&2; exit 3; }
+    tmp=$(mktemp "$dir/.$arg.XXXXXX")  # mktemp creates it with mode 0600
+    trap 'rm -f "$tmp"' EXIT
+    cat >"$tmp"
+    grep -q '^\[connection\]' "$tmp" || { echo "no keyfile on stdin" >&2; exit 2; }
+    uuid=$(sed -n 's/^uuid=//p' "$tmp" | head -n 1)
+    [[ $uuid =~ ^[0-9a-f-]{36}$ ]] || { echo "the keyfile has no uuid" >&2; exit 2; }
+    chmod 600 "$tmp"
+    mv "$tmp" "$file"
+    trap - EXIT
+    if ! nmcli connection load "$file" >/dev/null 2>&1 || ! nmcli -g connection.id connection show uuid "$uuid" >/dev/null 2>&1; then
+      rm -f "$file"
+      echo "NetworkManager didn't take the profile" >&2
+      exit 1
+    fi
+    echo "$uuid"
+    ;;
+  remove)
+    [[ $arg =~ ^[0-9a-f-]{36}$ ]] || { echo "bad uuid: $arg" >&2; exit 2; }
+    if nmcli -t -f UUID connection show --active | grep -qxF -- "$arg"; then
+      echo "the frame is connected through that network" >&2
+      exit 4
+    fi
+    nmcli connection delete uuid "$arg" >/dev/null
+    ;;
+  *)
+    echo "usage: wifi-connection add STEM < keyfile | wifi-connection remove UUID" >&2
+    exit 2
+    ;;
+esac

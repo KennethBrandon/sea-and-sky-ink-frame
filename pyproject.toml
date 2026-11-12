@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "photopainter"
+version = "0.1.0"
+description = "Software for a Waveshare RPi Zero PhotoPainter color e-ink photo frame"
+readme = "README.md"
+license = "CC-BY-NC-SA-4.0"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+# On the Pi these come from apt (python3-pil, python3-numpy, python3-skyfield,
+# python3-flask, python3-segno), not pip. Keep the minimums at or below the Pi's apt versions
+# (Debian Trixie: Skyfield 1.53, Flask 3.1, segno 1.6).
+dependencies = ["Pillow>=10", "numpy>=1.24", "skyfield>=1.53", "flask>=3.1", "segno>=1.6"]
+
+[project.optional-dependencies]
+# pillow-heif lets `photopainter preview` read iPhone HEIC photos on the Mac.
+dev = ["pytest>=8", "pillow-heif>=0.18"]
+# rawpy lets scripts/analyze-card.py read RAW photos of the color test card (.dng).
+raw = ["rawpy>=0.25"]
+
+[project.scripts]
+photopainter = "photopainter.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Import this checkout's src even when the venv's editable install points at another
+# checkout (e.g. a git worktree reusing the main checkout's .venv).
+pythonpath = ["src"]

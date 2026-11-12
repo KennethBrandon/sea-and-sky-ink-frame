@@ -1,0 +1,537 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ebe5dc" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1b1917" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Frame">
+<title>Frame</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='2' y='6' width='28' height='20' rx='2' fill='%232b2724'/%3E%3Crect x='5' y='9' width='22' height='14' fill='%23fbfaf6'/%3E%3Cpath d='M5 19c4-3 7-3 11 0s7 3 11 0v4H5z' fill='%23284a96'/%3E%3Ccircle cx='21' cy='13' r='2' fill='%23d9b72a'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/static/style.css">
+<script src="/static/app.js" defer></script>
+</head>
+<body>
+<!-- Icons for the screens, cloned where the page needs them (the mode buttons, Coming up). -->
+<template id="icon-tides"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 14c2.4-2.4 4.8-2.4 7.2 0s4.8 2.4 7.2 0 3.6-1.8 4.6-.8"/><path d="M2.5 19c2.4-2.4 4.8-2.4 7.2 0s4.8 2.4 7.2 0 3.6-1.8 4.6-.8"/><circle cx="16.5" cy="6.5" r="2.5"/></svg></template>
+<template id="icon-sky"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 3.5a8 8 0 1 0 5 13.6 7 7 0 0 1-5-13.6z"/><path d="M6 4.5v3M4.5 6h3"/></svg></template>
+<template id="icon-sea"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9c2.5-3 5-3 7.5 0s5 3 7.5 0 3.500-2.500 5-1"/><path d="M2 15c2.500-3 5-3 7.500 0s5 3 7.500 0 3.500-2.500 5-1"/></svg></template>
+<template id="icon-harbor"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2"/><path d="M12 7v13M8 11h8M4.5 13.5c.5 4 3.5 6.5 7.5 6.5s7-2.5 7.5-6.5"/></svg></template>
+<template id="icon-combo"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.500" y="4.500" width="17" height="15" rx="2"/><path d="M12 4.500v15M3.500 12h17"/></svg></template>
+<template id="icon-photo"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 16 5-5 4 4 2.5-2.5 5.5 5"/><circle cx="15.5" cy="9.5" r="1.5"/></svg></template>
+<template id="icon-auto"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/></svg></template>
+<template id="icon-card"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10M15 10v10"/></svg></template>
+<template id="icon-message"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg></template>
+<template id="icon-eye"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></template>
+<template id="icon-redraw"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/></svg></template>
+<template id="icon-remove"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12h7"/></svg></template>
+<template id="icon-battery"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.500" y="7.500" width="17" height="9" rx="2"/><path d="M22 10.500v3M6 10.500v3M9.500 10.500v3"/></svg></template>
+<template id="icon-help"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.500"/><path d="M9.500 9.500a2.500 2.500 0 1 1 3.700 2.200c-.8.400-1.200 1-1.200 1.800v.3"/><path d="M12 17v.01"/></svg></template>
+<template id="icon-about"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.500"/><path d="M12 11v5.500"/><path d="M12 7.800v.01"/></svg></template>
+<template id="icon-frame"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="1"/><rect x="7" y="9" width="10" height="6"/></svg></template>
+<template id="icon-health"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l2.500-6 4 12 2.500-6H21"/></svg></template>
+<template id="icon-grip"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg></template>
+
+<header class="top">
+  <div class="top-text">
+    <h1 id="place">Frame</h1>
+    <p id="clock" class="sub">&nbsp;</p>
+  </div>
+  <div class="top-actions">
+    <button id="help-open" class="help-button" type="button" aria-label="Help: what the buttons on the back of the frame do"><span class="icon" data-icon="help"></span></button>
+    <button id="health-dot" class="dot-button" type="button" aria-label="Health">
+      <span class="dot" data-level="unknown"></span>
+    </button>
+  </div>
+</header>
+
+<div class="cols">
+<div class="left">
+  <section class="wall" aria-label="On the wall now">
+    <div id="preview-bar" class="preview-bar" role="status" hidden>
+      <span class="what"><b>Preview:</b> <span id="preview-what"></span> Not on the wall.</span>
+      <button type="button" class="button small primary" id="preview-pin" hidden>Pin it</button>
+      <button type="button" class="button small" id="preview-back">Back to the wall</button>
+    </div>
+    <button id="frame" class="frame" type="button" aria-label="Show the image larger">
+      <span class="wood top" aria-hidden="true"></span><span class="wood right" aria-hidden="true"></span><span class="wood bottom" aria-hidden="true"></span><span class="wood left" aria-hidden="true"></span>
+      <span class="mat">
+        <span class="step">
+          <span class="panel" id="panel">
+            <img id="current" alt="The image on the wall now" hidden>
+            <img id="preview-img" alt="A preview, not on the wall" hidden>
+            <span id="empty" class="empty" hidden>Nothing drawn yet</span>
+            <span class="paper" aria-hidden="true"></span>
+            <span class="flash" aria-hidden="true"></span>
+            <span id="panel-drawing" class="panel-drawing" hidden><span class="spin" aria-hidden="true"></span><span id="panel-drawing-text">Drawing…</span></span>
+            <span id="preview-ribbon" class="ribbon" aria-hidden="true" hidden>Preview</span>
+          </span>
+        </span>
+      </span>
+    </button>
+    <div class="placard">
+      <div class="placard-row">
+        <span id="now-kind" class="now-kind">…</span>
+        <span class="drawn">
+          <span id="now-drawn">&nbsp;</span>
+          <button id="redraw" class="redraw" type="button" aria-label="Draw the wall again now" hidden>Redraw</button>
+        </span>
+      </div>
+      <div id="now-next" class="muted small" hidden></div>
+      <div id="activity" class="activity" hidden>
+        <span class="activity-icon" aria-hidden="true"></span>
+        <span class="activity-text">
+          <strong id="activity-title"></strong>
+          <span id="activity-detail" class="small"></span>
+        </span>
+      </div>
+      <details id="coming" class="coming" open hidden>
+        <summary class="coming-head"><span>Coming up</span><span id="coming-next" class="coming-next"></span></summary>
+        <ol id="coming-list"></ol>
+      </details>
+    </div>
+    <div id="alerts" class="alerts"></div>
+  </section>
+
+  <section class="card" id="mode-card" aria-labelledby="mode-title">
+    <h2 id="mode-title">Show</h2>
+    <div class="segments" id="modes" role="group" aria-label="Mode">
+      <div class="seg"><button type="button" data-kind="auto"><span class="icon" data-icon="auto"></span><span>Auto</span></button></div>
+      <div class="seg"><button type="button" data-kind="tides"><span class="icon" data-icon="tides"></span><span>Tides</span></button>
+        <button type="button" class="eye" data-preview="tides" aria-label="Preview the tides screen"><span class="icon" data-icon="eye"></span></button></div>
+      <div class="seg"><button type="button" data-kind="sky"><span class="icon" data-icon="sky"></span><span>Sky</span></button>
+        <button type="button" class="eye" data-preview="sky" aria-label="Preview the sky screen"><span class="icon" data-icon="eye"></span></button></div>
+      <div class="seg"><button type="button" data-kind="sea"><span class="icon" data-icon="sea"></span><span>Sea</span></button>
+        <button type="button" class="eye" data-preview="sea" aria-label="Preview the sea screen"><span class="icon" data-icon="eye"></span></button></div>
+      <div class="seg"><button type="button" data-kind="harbor"><span class="icon" data-icon="harbor"></span><span>Harbor</span></button>
+        <button type="button" class="eye" data-preview="harbor" aria-label="Preview the harbor chart"><span class="icon" data-icon="eye"></span></button></div>
+      <div class="seg"><button type="button" data-kind="combo"><span class="icon" data-icon="combo"></span><span>Combo</span></button>
+        <button type="button" class="eye" data-preview="combo" aria-label="Preview the combo screen"><span class="icon" data-icon="eye"></span></button></div>
+      <div class="seg"><button type="button" data-kind="photo"><span class="icon" data-icon="photo"></span><span>Photo</span></button></div>
+    </div>
+    <div class="until">
+      <span class="until-label">Until</span>
+      <div class="chips" id="untils" role="radiogroup" aria-label="How long">
+        <button type="button" role="radio" data-until="next_change"><span id="until-next">the next change</span></button>
+        <button type="button" role="radio" data-until="1h">an hour from now</button>
+        <button type="button" role="radio" data-until="">I change it</button>
+      </div>
+    </div>
+    <p id="mode-note" class="note"></p>
+  </section>
+</div>
+
+<main class="right">
+
+  <details class="card box" id="schedule-card" data-box="schedule">
+    <summary class="box-head">
+      <span class="icon" data-icon="auto"></span>
+      <h2 id="schedule-title">Schedule</h2>
+      <span class="box-sum" data-sum="schedule"></span>
+      <span class="box-dirty" data-dirty="schedule" hidden>Unsaved</span>
+    </summary>
+    <div class="box-body">
+      <form id="schedule" novalidate></form>
+      <div id="schedule-bar" class="save-bar" hidden>
+        <span id="schedule-dirty" class="small muted">Unsaved changes</span>
+        <button type="button" class="button" id="schedule-cancel">Cancel</button>
+        <button type="submit" form="schedule" class="button primary" id="schedule-save">Save</button>
+      </div>
+    </div>
+  </details>
+
+  <details class="card box" id="tides-card" data-box="tides">
+    <summary class="box-head">
+      <span class="icon" data-icon="tides"></span>
+      <h2 id="tides-title">Tides</h2>
+      <span class="box-sum" data-sum="tides"></span>
+      <span class="box-dirty" data-dirty="tides" hidden>Unsaved</span>
+    </summary>
+    <div class="box-body">
+      <div class="pv" data-pv="tides"></div>
+      <form id="tides" novalidate></form>
+      <div id="tides-bar" class="save-bar" hidden>
+        <span id="tides-dirty" class="small muted">Unsaved changes</span>
+        <button type="button" class="button" id="tides-cancel">Cancel</button>
+        <button type="submit" form="tides" class="button primary" id="tides-save">Save</button>
+      </div>
+    </div>
+  </details>
+
+  <details class="card box" id="sky-card" data-box="sky">
+    <summary class="box-head">
+      <span class="icon" data-icon="sky"></span>
+      <h2 id="sky-title">Sky</h2>
+      <span class="box-sum" data-sum="sky"></span>
+      <span class="box-dirty" data-dirty="sky" hidden>Unsaved</span>
+    </summary>
+    <div class="box-body">
+      <div class="pv" data-pv="sky"></div>
+      <form id="sky" novalidate></form>
+      <div id="sky-bar" class="save-bar" hidden>
+        <span id="sky-dirty" class="small muted">Unsaved changes</span>
+        <button type="button" class="button" id="sky-cancel">Cancel</button>
+        <button type="submit" form="sky" class="button primary" id="sky-save">Save</button>
+      </div>
+    </div>
+  </details>
+
+  <details class="card box" id="sea-card" data-box="sea">
+    <summary class="box-head">
+      <span class="icon" data-icon="sea"></span>
+      <h2 id="sea-title">Sea</h2>
+      <span class="box-sum" data-sum="sea"></span>
+    </summary>
+    <div class="box-body">
+      <div class="pv" data-pv="sea"></div>
+      <p class="group-note box-note">Sea has no settings of its own. It's drawn from the swell, wind and tide, looking out the way the window faces (Frame, under Location).</p>
+    </div>
+  </details>
+
+  <details class="card box" id="harbor-card" data-box="harbor">
+    <summary class="box-head">
+      <span class="icon" data-icon="harbor"></span>
+      <h2 id="harbor-title">Harbor</h2>
+      <span class="box-sum" data-sum="harbor"></span>
+      <span class="box-dirty" data-dirty="harbor" hidden>Unsaved</span>
+    </summary>
+    <div class="box-body">
+      <div class="pv" data-pv="harbor"></div>
+      <form id="harbor" novalidate></form>
+      <div id="harbor-bar" class="save-bar" hidden>
+        <span id="harbor-dirty" class="small muted">Unsaved changes</span>
+        <button type="button" class="button" id="harbor-cancel">Cancel</button>
+        <button type="submit" form="harbor" class="button primary" id="harbor-save">Save</button>
+      </div>
+    </div>
+  </details>
+
+  <details class="card box" id="photos-card" data-box="photos">
+    <summary class="box-head">
+      <span class="icon" data-icon="photo"></span>
+      <h2 id="photos-title">Photos <span id="photo-count" class="count"></span></h2>
+      <span class="box-sum"></span>
+      <span class="box-dirty" data-dirty="photos" hidden>Unsaved</span>
+      <label class="button small primary" id="upload-label">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M6.5 9.5 12 4l5.5 5.5M4 20h16"/></svg>
+        Upload
+        <input id="upload" type="file" accept="image/*" multiple hidden>
+      </label>
+    </summary>
+    <div class="box-body">
+      <p id="photo-next" class="note"></p>
+      <div id="upload-progress" class="progress" hidden><span></span><b></b></div>
+      <details class="group" id="photos-settings">
+        <summary>Photo settings</summary>
+        <form id="photos" novalidate></form>
+        <div id="photos-bar" class="save-bar" hidden>
+          <span id="photos-dirty" class="small muted">Unsaved changes</span>
+          <button type="button" class="button" id="photos-cancel">Cancel</button>
+          <button type="submit" form="photos" class="button primary" id="photos-save">Save</button>
+        </div>
+      </details>
+      <p id="photos-hint" class="note" hidden>The frame shows them in this order.
+        <span class="if-mouse">Drag a photo to move it. To add more, drop them anywhere on this page.</span>
+        <span class="if-touch">Press and hold a photo, then drag to move it.</span></p>
+      <div id="grid" class="grid"></div>
+      <p id="photos-empty" class="note" hidden>No photos yet. Upload some from your phone, or drop them anywhere on this page from a computer: they're resized to 1600 px before sending.</p>
+    </div>
+  </details>
+
+  <details class="card box" id="battery-card" data-box="battery">
+    <summary class="box-head">
+      <span class="icon" data-icon="battery"></span>
+      <h2 id="battery-title">Battery</h2>
+      <span class="box-sum" data-sum="battery"></span>
+      <span class="box-dirty" data-dirty="battery" hidden>Unsaved</span>
+    </summary>
+    <div class="box-body">
+      <dl id="battery-now" class="rows"></dl>
+      <h3 class="sub-head">Last 5 days</h3>
+      <p id="battery-readout" class="chart-readout small muted"></p>
+      <div id="battery-chart" class="chart" aria-label="Battery voltage and current over the last 5 days: drag along it to read a time"></div>
+      <p class="chart-key small muted"><span><i class="key charging"></i>Charging</span><span><i class="key on-battery"></i>On battery</span></p>
+      <p id="battery-summary" class="battery-summary"></p>
+      <p id="battery-note" class="small muted"></p>
+      <h3 class="sub-head">Settings</h3>
+      <form id="battery" novalidate></form>
+      <div id="battery-bar" class="save-bar" hidden>
+        <span id="battery-dirty" class="small muted">Unsaved changes</span>
+        <button type="button" class="button" id="battery-cancel">Cancel</button>
+        <button type="submit" form="battery" class="button primary" id="battery-save">Save</button>
+      </div>
+    </div>
+  </details>
+
+  <details class="card box" id="settings-card" data-box="settings">
+    <summary class="box-head">
+      <span class="icon" data-icon="frame"></span>
+      <h2 id="settings-title">Frame</h2>
+      <span class="box-sum">Location, display, name, Wi-Fi</span>
+      <span class="box-dirty" data-dirty="settings" hidden>Unsaved</span>
+    </summary>
+    <div class="box-body">
+    <p id="config-error" class="alert" hidden></p>
+    <form id="settings" novalidate></form>
+    <div id="settings-bar" class="save-bar" hidden>
+      <span id="settings-dirty" class="small muted">Unsaved changes</span>
+      <button type="button" class="button" id="settings-cancel">Cancel</button>
+      <button type="submit" form="settings" class="button primary" id="settings-save">Save</button>
+    </div>
+    <details class="group" id="name-tool">
+      <summary>Frame name</summary>
+      <p class="group-note">The name in the address you type to reach this page. It changes at once, and the old address stops working.</p>
+      <form id="name-form" novalidate>
+        <input type="text" id="name-input" maxlength="32" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" aria-label="Frame name" aria-describedby="name-address">
+        <p id="name-address" class="small muted"></p>
+        <button type="submit" class="button primary" id="name-save" disabled>Rename</button>
+      </form>
+    </details>
+    <details class="group" id="wifi-tool">
+      <summary>Wi-Fi networks</summary>
+      <p class="group-note">The networks the frame joins on its own. Add the one at the house it's going to and it connects on arrival; Tailscale follows. The frame has 2.4 GHz Wi-Fi only: on a 5 GHz-only network it just never connects, so check the band before you go.</p>
+      <ul id="wifi-list" class="wifi-list" aria-label="Saved networks"></ul>
+      <p id="wifi-empty" class="small muted" hidden>No saved networks.</p>
+      <form id="wifi-form" class="wifi-form" novalidate>
+        <p class="wifi-add-head">Add a network</p>
+        <input type="text" id="wifi-ssid" maxlength="32" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" placeholder="Network name" aria-label="Network name">
+        <div class="pw">
+          <input type="password" id="wifi-password" maxlength="63" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" placeholder="Password (none if open)" aria-label="Password">
+          <button type="button" class="button small" id="wifi-show" aria-pressed="false">Show</button>
+        </div>
+        <label class="wifi-hidden"><span class="switch"><input type="checkbox" id="wifi-hidden"><span></span></span><span>Hidden network (its name isn't broadcast)</span></label>
+        <p id="wifi-check" class="small muted"></p>
+        <button type="submit" class="button primary" id="wifi-save" disabled>Save network</button>
+      </form>
+      <form id="wifi-help-form" class="wifi-form" novalidate>
+        <p class="wifi-add-head">If the frame loses its Wi-Fi</p>
+        <p class="small muted">It carries on, reconnects by itself and shows a small mark. For a new router or password, hold the back button for a second: the frame shows a QR code that sets it up from a phone. This line goes on that screen.</p>
+        <input type="text" id="wifi-help" maxlength="80" autocomplete="off" placeholder="Stuck? Call Sam at 555-0100" aria-label="A line for the setup screen">
+        <button type="submit" class="button" id="wifi-help-save">Save line</button>
+      </form>
+    </details>
+    <details class="group" id="card-tool">
+      <summary>Color test card</summary>
+      <p class="group-note">Shows a chart of the panel's inks for an hour, then goes back to the schedule. Photograph it to measure how the colors really look (see docs/hardware.md).</p>
+      <div class="sheet-row">
+        <button type="button" class="button primary" id="card-show">Show on the frame</button>
+        <button type="button" class="button" id="card-preview" data-preview="card">Preview</button>
+      </div>
+    </details>
+    </div>
+  </details>
+
+  <details class="card box" id="health-card" data-box="health">
+    <summary class="box-head">
+      <span class="icon" data-icon="health"></span>
+      <h2 id="health-title">Health</h2>
+      <span class="box-sum" data-sum="health"></span>
+    </summary>
+    <div class="box-body">
+      <div id="problems" class="problems"></div>
+      <dl id="health" class="rows"></dl>
+      <h3 class="sub-head">Data</h3>
+      <dl id="sources" class="rows"></dl>
+    </div>
+  </details>
+
+  <details class="card box" id="help-card" data-box="help">
+    <summary class="box-head">
+      <span class="icon" data-icon="help"></span>
+      <h2 id="help-title">Help</h2>
+      <span class="box-sum">The buttons on the back</span>
+    </summary>
+    <div class="box-body">
+      <!-- In mm from the frame's top left corner, measured from the Owner's photo of the back (2026-11-07), straightened and turned to how it hangs.
+           Its Pi mounting holes came out 58.7 x 23.8 mm (58 x 23 really) and its buttons 15 mm apart. -->
+      <figure class="back-figure">
+      <svg class="back-art" viewBox="0 -19 216 172" role="img" aria-labelledby="back-art-title">
+        <title id="back-art-title">The back of the frame as it hangs: a black plate in a wooden frame, with a small green circuit board in a window left of the middle and a folding stand right of it. Two small black buttons sit side by side above the circuit board: Forward on the left, Back on the right.</title>
+        <defs>
+          <radialGradient id="button-cap" cx=".38" cy=".32" r=".75">
+            <stop offset="0" stop-color="#9aa1ab"/>
+            <stop offset=".55" stop-color="#3a3e45"/>
+            <stop offset="1" stop-color="#121316"/>
+          </radialGradient>
+          <pattern id="grip-hatch" width="3.2" height="3.2" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <path d="M0 0H3.2M0 0V3.2" fill="none" stroke="#66666b" stroke-width=".5"/>
+          </pattern>
+        </defs>
+        <!-- wood and the black plate -->
+        <rect width="216" height="153" rx="1.5" fill="#b56838"/>
+        <path d="M.5 .5 11 11M215.5 .5 203.500 11M.5 152.500 11 142M215.5 152.500 203.500 142" stroke="#8f4b23" stroke-width=".7"/>
+        <rect x="11" y="10.800" width="192.500" height="131.200" fill="#8f4b23"/>
+        <rect x="12.600" y="12.300" width="189" height="128" rx="1" fill="#1c1c1e"/>
+        <!-- what's printed on the plate, sideways as it hangs, and the hanging clip -->
+        <text transform="translate(35.500 111) rotate(-90)" font-size="8" font-weight="600" textLength="70" lengthAdjust="spacingAndGlyphs" fill="#e6e6e6">RPi Zero PhotoPainter</text>
+        <path d="M13 72h10v13H13z" fill="#77777c"/>
+        <rect x="21.500" y="69" width="8.500" height="17" rx="2" fill="#2d2b3a" stroke="#56566a" stroke-width=".5"/>
+        <rect x="23.300" y="73" width="4.900" height="9" rx=".7" fill="#8a8a8f"/>
+        <!-- the Pi in its window, through its clear case -->
+        <rect x="49.700" y="40.100" width="38.700" height="70.600" rx="1" fill="#050505"/>
+        <rect x="49" y="42.700" width="34.700" height="67.600" rx="3.500" fill="#7fa688" stroke="#cdd9ce" stroke-width=".8"/>
+        <rect x="50.400" y="50.700" width="10.200" height="53.400" rx=".8" fill="#d9ded8" opacity=".85"/>
+        <path d="M53.500 52.300V101M56.040 52.300V101" fill="none" stroke="#a88c42" stroke-width="1.300" stroke-linecap="round" stroke-dasharray="0 2.540"/>
+        <path d="M61.800 47.900h0M65 47.900h0M67.700 47.900h0M61.300 51.300h0M64.300 51.300h0M72.800 51.300h0M74 55.800h0M76.600 55.100h0M74 66.300h0M78.300 63h0M79.100 59.600h0M62.100 94.400h0M75.700 97.200h0M78.300 98h0M75.700 100.600h0" fill="none" stroke="#dba63f" stroke-width="1.800" stroke-linecap="round"/>
+        <path d="M54.600 47.300h0M78.400 47.300h0M54.600 106h0M78.400 106h0" fill="none" stroke="#1a1a1a" stroke-width="3.200" stroke-linecap="round"/>
+        <!-- the power switch, the USB socket and the charge light -->
+        <circle cx="70.800" cy="120" r="4.500" fill="#0c0c0d" stroke="#46464a" stroke-width=".5"/>
+        <circle cx="70.800" cy="120" r="2.200" fill="#303033"/>
+        <rect x="65.700" y="131.300" width="10.500" height="4.300" rx="2.100" fill="#08080a" stroke="#bdbdc2" stroke-width=".6"/>
+        <circle cx="81.100" cy="133.500" r="1.400" fill="#050505" stroke="#46464a" stroke-width=".4"/>
+        <g font-size="4.200" font-weight="500" fill="#d8d8d8">
+          <text transform="translate(64.200 136.700) rotate(-90)">USB</text>
+          <text transform="translate(87 137) rotate(-90)">CHG</text>
+          <g font-size="3.800">
+            <text transform="translate(62.500 121) rotate(-90)">ON</text>
+            <text transform="translate(66 121.500) rotate(-90)">OFF</text>
+          </g>
+        </g>
+        <!-- the stand, folded flat: a ring at the top, its foot at the bottom edge -->
+        <circle cx="112.700" cy="43.400" r="23.200" fill="#2b2b2e" stroke="#3f3f43" stroke-width=".4"/>
+        <circle cx="112.700" cy="43.400" r="15" fill="#1e1e20"/>
+        <g transform="rotate(-2 112.700 43.400)">
+          <rect x="110.900" y="105.500" width="4.500" height="9.500" fill="#55555a"/>
+          <path fill-rule="evenodd" fill="#2b2b2e" stroke="#47474c" stroke-width=".4" d="M102 40.800H109.300V60H116.500V40.800H123.800L126.900 52 139.100 146Q139.600 152.300 134 152.300H91.800Q86.200 152.300 86.700 146L98.900 52ZM109.100 65.400H116.700V121.500A3.800 3.800 0 0 1 109.100 121.500Z"/>
+          <path fill="url(#grip-hatch)" d="M102.400 41.500H108.800V76.300H96.400L99.400 52.500ZM123.400 41.500H117V76.300H129.400L126.400 52.500Z"/>
+        </g>
+        <path d="M111.900 22.900h0M95.700 51.800h0M129.500 51.700h0" fill="none" stroke="#0e0e0f" stroke-width="3.400" stroke-linecap="round"/>
+        <!-- the buttons: 6 mm across, 15 mm apart -->
+        <circle cx="45.500" cy="25.500" r="3" fill="url(#button-cap)" stroke="#f0f0f0" stroke-width=".5"/>
+        <circle cx="60.500" cy="25.500" r="3" fill="url(#button-cap)" stroke="#f0f0f0" stroke-width=".5"/>
+        <!-- the labels, off the frame so that they can't be taken for printing on it -->
+        <path class="back-line-halo" d="M45.500 -5V22M60.500 -5V22"/>
+        <path class="back-line" d="M45.500 -5V22M60.500 -5V22"/>
+        <text class="back-label" x="48.500" y="-8" text-anchor="end">Forward</text>
+        <text class="back-label" x="57.500" y="-8">Back</text>
+      </svg>
+      <figcaption>The back of the frame, as it hangs</figcaption>
+      </figure>
+      <p class="help-text">Two small round black buttons sit side by side on the back of the frame, just above the small green circuit board. With the frame on the wall, face the picture and reach behind the top edge, about a quarter of the way in from the right: the one nearer the right is Forward.</p>
+
+      <h3 class="sub-head">What a press does</h3>
+      <table class="press-table">
+        <thead>
+          <tr><td></td><th scope="col">On the schedule</th><th scope="col">In photos only</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Forward</th><td>The next screen</td><td>The next photo</td></tr>
+          <tr><th scope="row">Back</th><td>The screen before</td><td>The photo before</td></tr>
+          <tr><th scope="row">Forward held for a second, then let go</th><td>Into photos only</td><td>Back to the schedule</td></tr>
+          <tr><th scope="row">Back held for a second, then let go</th><td colspan="2">Wi-Fi setup, if the frame has lost its Wi-Fi</td></tr>
+          <tr><th scope="row">Both held for a second</th><td colspan="2">Low power on or off</td></tr>
+        </tbody>
+      </table>
+
+      <h3 class="sub-head">Give it time</h3>
+      <p class="help-text">The picture takes about 30 seconds to change, and it flickers and flashes while it does. That's normal for this kind of screen. A press during that time is ignored, so wait for the picture to settle before you press again.</p>
+
+      <h3 class="sub-head">On the schedule</h3>
+      <p class="help-text">This is how the frame starts: it changes by itself through the day. Forward and Back jump along the day's screens (or the night's), and it carries on from there until the next sunrise, sunset or midnight. If that lands on a photo, it's the next photo, whichever button you pressed. If only one screen is set for this time of day, there's nowhere to go, so a press does nothing.</p>
+
+      <h3 class="sub-head">Photos only</h3>
+      <p class="help-text">A slideshow of your photos, day and night. It has no end of its own: it stays on until you hold Forward for a second and let go, or tap Auto under Show on this page.</p>
+
+      <h3 class="sub-head">Low power</h3>
+      <p class="help-text">For when the frame runs on its battery, in a power cut or unplugged. With it on, Wi-Fi and this page switch off to make the charge last. While the frame is plugged in, nothing changes until the next time it's unplugged. A small crescent near the bottom right of the picture shows it's set.</p>
+      <p class="help-text">If this page has gone away, hold both buttons for a second, or plug the frame in. Either brings it back within a minute or so.</p>
+      <p class="help-text">When the battery is nearly flat, the frame settles on a photo and the buttons can't change the picture until it's plugged in again.</p>
+
+      <h3 class="sub-head">No Wi-Fi</h3>
+      <p class="help-text">If the Wi-Fi goes down, you don't need to do anything. The tides, the sky and your photos carry on without it, and the frame reconnects by itself when the Wi-Fi comes back. After about 10 minutes, this small mark appears near the bottom right of the picture the next time it changes:
+        <svg class="mark-art" width="24" height="24" viewBox="0 0 24 24" role="img" aria-label="A Wi-Fi symbol with a red X"><rect x=".5" y=".5" width="23" height="23" fill="#fff" stroke="#111"/><path d="M1.400 10.500a15 15 0 0 1 21.200 0M5 14a10 10 0 0 1 14 0M8.500 17.500a5 5 0 0 1 7 0" fill="none" stroke="#111" stroke-width="2"/><rect x="11" y="18" width="2" height="2" fill="#111"/><rect x="12" y="12" width="11" height="11" fill="#fff"/><path d="M14.500 14.500l6 6M14.500 20.500l6-6" stroke="#c0241c" stroke-width="2"/></svg></p>
+      <p class="help-text">If the Wi-Fi stays away because of a new router, a new password or a move to a new house, hold Back for a second and let go. The picture changes to a QR code. Point your phone's camera at it and tap Join, then pick your home Wi-Fi and type its password. Your phone will drop off while the frame tries it, so watch the frame: in about a minute it says whether that worked. Any button calls it off, and it turns itself off after 15 minutes if nobody uses it.</p>
+      <p class="help-text">This page lives on the frame, so it won't open while the frame has no Wi-Fi.</p>
+    </div>
+  </details>
+
+  <details class="card box" id="about-card" data-box="about">
+    <summary class="box-head">
+      <span class="icon" data-icon="about"></span>
+      <h2 id="about-title">About</h2>
+      <span class="box-sum">© Kenneth Brandon, credits</span>
+    </summary>
+    <div class="box-body">
+      <p class="about-owner">© 2026 Kenneth Brandon</p>
+      <p class="about-note">Credits and licenses for the data and software the frame uses.</p>
+      <!-- The credits the licenses require: keep in step with data/README.md, which has each
+           file's source, version and changes. -->
+      <h3 class="sub-head">Data</h3>
+      <ul class="about-list">
+        <li><b>Tides and water levels:</b> NOAA CO-OPS, the Newport Bay Entrance and Los Angeles stations. The measured water level is estimated for the Wedge from the Los Angeles gauge. US government work, public domain.</li>
+        <li><b>Weather and surf:</b> <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>,
+          <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>, free for non-commercial use.</li>
+        <li><b>Milky Way:</b> <a href="https://www.eso.org/public/images/eso0932a/" target="_blank" rel="noopener">ESO/S. Brunier</a>,
+          CC BY 4.0. Reduced to brightness dots.</li>
+        <li><b>Stars:</b> <a href="https://codeberg.org/astronexus/hyg" target="_blank" rel="noopener">HYG database</a> 4.1, astronexus.com,
+          <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener">CC BY-SA 4.0</a>.
+          The frame's trimmed copy is CC BY-SA 4.0 too.</li>
+        <li><b>Constellation lines:</b> <a href="https://stellarium.org/" target="_blank" rel="noopener">Stellarium</a> 26.3, CC BY-SA 4.0.</li>
+        <li><b>Catalina's skyline:</b> Copernicus DEM GLO-90 via Open-Meteo. © DLR e.V. 2010–2014 and © Airbus Defence and Space GmbH 2014–2018, provided under COPERNICUS by the European Union and ESA.</li>
+        <li><b>Sun, Moon and planets:</b> NASA/JPL's DE421 ephemeris, published for public use.</li>
+        <li><b>Harbor chart:</b> shoreline and marks <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors</a>,
+          <a href="https://opendatacommons.org/licenses/odbl/" target="_blank" rel="noopener">ODbL</a>. Depths from NOAA ENC, in feet below MLLW, public domain. Not for navigation.</li>
+      </ul>
+      <h3 class="sub-head">Software</h3>
+      <ul class="about-list">
+        <li><b>Panel driver:</b> <a href="https://github.com/waveshareteam/RPi_Zero_PhotoPainter" target="_blank" rel="noopener">Waveshare</a>'s epd7in3e, MIT license, copied unchanged.</li>
+        <li><b>Font:</b> <a href="https://dejavu-fonts.github.io/" target="_blank" rel="noopener">DejaVu Sans</a> 2.37, Bitstream Vera and Arev licenses; DejaVu's changes are public domain.</li>
+        <li><b>Libraries,</b> from Raspberry Pi OS: Python (PSF), Pillow (MIT-CMU), NumPy, Flask, segno and gpiozero (BSD), Skyfield and spidev (MIT), lgpio (Unlicense).</li>
+      </ul>
+    </div>
+  </details>
+</main>
+</div>
+
+<div id="sheet" class="sheet" hidden>
+  <div class="sheet-backdrop" data-close></div>
+  <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="sheet-name">
+    <div class="sheet-grip" aria-hidden="true"></div>
+    <div class="sheet-preview"><img id="sheet-img" alt=""></div>
+    <div class="sheet-title">
+      <h3 id="sheet-name"></h3>
+      <span id="sheet-meta" class="small muted"></span>
+    </div>
+    <div class="sheet-actions">
+      <button type="button" class="button primary wide" data-act="show-now"></button>
+      <button type="button" class="button wide" data-act="up-next"></button>
+      <div class="sheet-row">
+        <button type="button" class="button" data-act="hide"></button>
+        <button type="button" class="button danger" data-act="delete">Delete</button>
+      </div>
+      <button type="button" class="button ghost wide" data-close>Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden>
+  <span id="toast-text"></span>
+  <button type="button" id="toast-act" class="toast-act" hidden></button>
+</div>
+
+<div id="drop" class="drop" hidden>
+  <div class="drop-box">
+    <div class="drop-card">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4M6.5 9.5 12 4l5.5 5.5M4 20h16"/></svg>
+      <strong id="drop-title">Drop to upload</strong>
+      <span id="drop-detail"></span>
+    </div>
+  </div>
+</div>
+
+<div id="viewer" class="viewer" hidden>
+  <button type="button" class="viewer-close" aria-label="Close">✕</button>
+  <div id="viewer-drawing" class="drawing" hidden>
+    <span class="spin" aria-hidden="true"></span>
+    <strong id="viewer-title">Drawing…</strong>
+    <span id="viewer-detail">About 5 seconds on the frame. This doesn't touch the wall.</span>
+  </div>
+  <img id="viewer-img" alt="" hidden>
+  <div id="viewer-bar" class="viewer-bar" hidden>
+    <span id="viewer-caption"></span>
+    <button type="button" class="button small primary" id="viewer-pin" hidden>Pin it</button>
+  </div>
+</div>
+</body>
+</html>

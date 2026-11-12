@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Rename the frame on the network, at once and for good. Runs as root on the Pi, started by
+# the dashboard (web/frame_name.py). Usage: sudo set-frame-name InkFrame
+#
+# A failure of the hostname stops here with a non-zero exit. The later steps only warn
+# ("warning: ..." on stdout), because the frame is reachable as long as one name works.
+set -euo pipefail
+
+name=${1:-}
+if [[ ! $name =~ ^[A-Za-z0-9]([A-Za-z0-9-]{0,30}[A-Za-z0-9])?$ ]]; then
+  echo "bad name: $name" >&2
+  exit 2
+fi
+
+# cloud-init set the name on first boot and would put the old one back in /etc/hosts at
+# every boot. Only those three modules have to stop; Wi-Fi, SSH and the rest stay.
+dropin=/etc/cloud/cloud.cfg.d/99-photopainter-name.cfg
+if [[ -f /etc/cloud/cloud.cfg && ! -f $dropin ]]; then
+  {
+    echo "# Written by set-frame-name: the dashboard owns the hostname after first boot."
+    echo "cloud_init_modules:"
+    sed -n '/^cloud_init_modules:/,/^$/p' /etc/cloud/cloud.cfg |
+      grep -E '^ *- ' | grep -vE -- '- *(set_hostname|update_hostname|update_etc_hosts)$'
+  } >"$dropin.tmp"
+  mv "$dropin.tmp" "$dropin"
+fi
+
+hostnamectl set-hostname --static "$name"
+hostname "$name"
+
+# sudo looks the machine's own name up here, and complains on every run if it's missing.
+if grep -q '^127\.0\.1\.1' /etc/hosts; then
+  sed -i "s/^127\.0\.1\.1.*/127.0.1.1 $name/" /etc/hosts
+else
+  echo "127.0.1.1 $name" >>/etc/hosts
+fi
+
+systemctl restart avahi-daemon || echo "warning: the .local name didn't update"
+
+if command -v tailscale >/dev/null; then
+  tailscale set --hostname="$name" >/dev/null 2>&1 || echo "warning: the Tailscale name didn't update"
+fi

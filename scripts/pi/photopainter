@@ -1,0 +1,10 @@
+#!/bin/sh
+# Launcher for the Pi. scripts/deploy.sh symlinks it to /usr/local/bin/photopainter.
+# Runs the code from this checkout with apt's Python packages (no venv, no pip).
+REPO=$(dirname "$(dirname "$(dirname "$(readlink -f "$0")")")")
+export PYTHONPATH="$REPO/src${PYTHONPATH:+:$PYTHONPATH}"
+# lgpio (gpiozero's backend) writes .lgd-nfy* files into its working directory; keep them
+# out of the current directory, which may not be writable (e.g. under systemd).
+export LG_WD="${LG_WD:-$HOME/.cache/photopainter}"
+mkdir -p "$LG_WD"
+exec python3 -m photopainter "$@"

@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Secrets and local config (commit config.example.json instead)
+.env
+.env.*
+!.env.example
+config.toml
+/config.json
+secrets/
+*token*.json
+*credentials*.json
+
+# Runtime data
+photos/
+cache/
+previews/
+*.log
+
+# JPL ephemeris: fetched by scripts/fetch-ephemeris.sh (linked from a shared folder)
+data/*.bsp
+
+# Editors / OS
+.DS_Store
+.vscode/
+.idea/
+
+# Claude Code local settings
+.claude/settings.local.json

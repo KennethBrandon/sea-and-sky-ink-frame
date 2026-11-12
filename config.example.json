@@ -1,0 +1,34 @@
+{
+  "location": {"name": "The Wedge", "lat": 33.593, "lon": -117.882,
+               "timezone": "America/Los_Angeles"},
+  "display": {"portrait": false, "flip": true},
+  "schedule": {
+    "day": [{"screen": "photo", "minutes": 10}, {"screen": "tides", "minutes": 10},
+            {"screen": "harbor", "minutes": 10}, {"screen": "sky", "minutes": 10},
+            {"screen": "sea", "minutes": 10}, {"screen": "combo", "minutes": 10}],
+    "night": [{"screen": "sky", "minutes": 60}],
+    "night_offset_minutes": 0,
+    "quiet_hours": null
+  },
+  "tides": {"station": "9410580", "datum": "MLLW",
+            "chart_days_behind": 1, "chart_days_ahead": 2,
+            "label_tides": "all", "label_times": true, "label_heights": "extremes",
+            "flip_arrows": true},
+  "weather": {"enabled": true},
+  "surf": {"enabled": true},
+  "gauge": {"enabled": true, "station": "9410660"},
+  "sky": {"center_azimuth_deg": 190, "field_of_view_deg": 170, "max_altitude_deg": 90,
+          "magnitude_limit": 4.5, "constellation_lines": true, "labels": true,
+          "day_magnitude_limit": 2.0, "day_constellation_lines": true, "sun_arc": true},
+  "harbor": {
+    "south": 33.5835,
+    "north": 33.61575,
+    "center_lon": -117.9015,
+    "chart_days_behind": 1, "chart_days_ahead": 4,
+    "label_tides": "all", "label_times": true, "label_heights": "extremes"
+  },
+  "battery": {"indicator_volts": 3.6, "low_volts": 3.3, "capacity_mah": 2000, "low_power": false,
+              "low_power_after_minutes": 1, "data_every_hours": 2.0},
+  "photos":{"folder": "~/photos", "fit": "auto", "hidden": [], "show_now_minutes": 10},
+  "wifi": {"help": ""}
+}

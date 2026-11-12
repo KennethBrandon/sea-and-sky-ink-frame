@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Connect the frame</title>
+<style>
+  /* The page a phone gets on the frame's setup hotspot (hotspot.py). No internet there, so
+     everything is in this file, and it has to work in a phone's small sign-in window. */
+  :root { --bg: #f6f4ef; --card: #fff; --ink: #1d1c1a; --muted: #6a6761; --line: #d9d5cc; --accent: #1747a6; --bad: #a8261c; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #171614; --card: #23211e; --ink: #f2efe8; --muted: #a9a59c; --line: #3b3833; --accent: #8db0f5; --bad: #f09a90; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.4 -apple-system, system-ui, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 460px; margin: 0 auto; padding: 20px 16px 40px; }
+  h1 { font-size: 25px; line-height: 1.2; margin: 0 0 6px; }
+  p { margin: 0 0 12px; }
+  .muted { color: var(--muted); font-size: 15px; }
+  .bad { color: var(--bad); font-weight: 600; }
+  ul { list-style: none; margin: 14px 0; padding: 0; background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  li + li { border-top: 1px solid var(--line); }
+  li label { display: flex; align-items: center; gap: 12px; padding: 13px 14px; cursor: pointer; min-height: 48px; }
+  li input { width: 20px; height: 20px; margin: 0; accent-color: var(--accent); flex: none; }
+  .name { flex: 1; overflow-wrap: anywhere; }
+  .open { color: var(--muted); font-size: 14px; }
+  .bars { display: inline-flex; align-items: flex-end; gap: 2px; height: 14px; flex: none; }
+  .bars i { width: 3px; background: var(--line); border-radius: 1px; }
+  .bars i.on { background: var(--ink); }
+  .field { margin: 14px 0; }
+  .field label { display: block; font-weight: 600; margin-bottom: 5px; }
+  .row { display: flex; gap: 8px; }
+  input[type=text], input[type=password] { flex: 1; min-width: 0; width: 100%; font: inherit; padding: 12px; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 10px; }
+  button { font: inherit; font-weight: 600; border-radius: 10px; padding: 12px 16px; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; min-height: 48px; }
+  button.go { width: 100%; background: var(--accent); border-color: var(--accent); color: var(--bg); margin-top: 6px; }
+  button:disabled { opacity: .5; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <section id="choose" hidden>
+    <h1>Connect the frame to Wi-Fi</h1>
+    <p id="result" class="bad" hidden></p>
+    <p class="muted">Pick your home network. The frame hears 2.4 GHz Wi-Fi only, so a network on 5 GHz alone won't be here.</p>
+    <form id="form" novalidate>
+      <ul id="list"></ul>
+      <div class="field" id="other-field" hidden>
+        <label for="other">Network name</label>
+        <input type="text" id="other" maxlength="32" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="field" id="password-field" hidden>
+        <label for="password">Password</label>
+        <div class="row">
+          <input type="password" id="password" maxlength="63" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false">
+          <button type="button" id="show" aria-pressed="false">Show</button>
+        </div>
+      </div>
+      <p id="problem" class="bad" role="alert" hidden></p>
+      <button type="submit" class="go" id="join" disabled>Connect</button>
+    </form>
+  </section>
+  <section id="trying" hidden>
+    <h1>Now look at the frame</h1>
+    <p>It's trying <strong id="trying-name"></strong>. Your phone will drop off the frame's network while it does.</p>
+    <p>In about a minute the frame's screen says whether it worked. If it asks you to try again, your phone should rejoin by itself, and this page will still be here.</p>
+  </section>
+  <section id="off" hidden>
+    <h1>The setup network has ended</h1>
+    <p>To start it again, hold the back button on the frame for a second, then let go.</p>
+  </section>
+</main>
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const OTHER = " other network";  // the row for typing a name: not a name a scan gives, since names here have no leading space
+let networks = [];
+
+function show(section) {
+  for (const id of ["choose", "trying", "off"]) $(id).hidden = id !== section;
+}
+
+function bars(signal) {
+  const span = document.createElement("span");
+  span.className = "bars";
+  span.setAttribute("aria-label", `Signal ${signal} of 100`);
+  [25, 50, 75].forEach((at, i) => {
+    const bar = document.createElement("i");
+    bar.style.height = `${5 + i * 4}px`;
+    if (signal >= at - 15) bar.className = "on";
+    span.append(bar);
+  });
+  return span;
+}
+
+function row(value, label, extra) {
+  const li = document.createElement("li");
+  const lab = document.createElement("label");
+  const input = document.createElement("input");
+  input.type = "radio";
+  input.name = "network";
+  input.value = value;
+  const name = document.createElement("span");
+  name.className = "name";
+  name.textContent = label;
+  lab.append(input, name, ...extra);
+  li.append(lab);
+  return li;
+}
+
+function renderList() {
+  const rows = networks.map((n) => {
+    const extra = [bars(n.signal)];
+    if (!n.secure) {
+      const open = document.createElement("span");
+      open.className = "open";
+      open.textContent = "no password";
+      extra.unshift(open);
+    }
+    return row(n.ssid, n.ssid, extra);
+  });
+  rows.push(row(OTHER, networks.length ? "Not listed: type its name" : "Type your network's name", []));
+  $("list").replaceChildren(...rows);
+}
+
+function chosen() {
+  const picked = document.querySelector("input[name=network]:checked");
+  return picked ? picked.value : null;
+}
+
+function refresh() {
+  const value = chosen();
+  const other = value === OTHER;
+  const net = networks.find((n) => n.ssid === value);
+  $("other-field").hidden = !other;
+  $("password-field").hidden = value === null || (net !== undefined && !net.secure);
+  const ssid = other ? $("other").value.trim() : value;
+  const pw = $("password").value;
+  const needs = other ? pw.length > 0 : net !== undefined && net.secure;
+  $("join").disabled = !ssid || (needs && pw.length < 8);
+}
+
+async function load() {
+  let data;
+  try {
+    data = await (await fetch("/api/setup", { cache: "no-store" })).json();
+  } catch {
+    return null;  // off the hotspot for now: the frame may be trying a network
+  }
+  if (!data.on) {
+    show("off");
+    return data;
+  }
+  if (data.joining) {
+    show("trying");
+    return data;
+  }
+  if (JSON.stringify(data.networks) !== JSON.stringify(networks) || $("choose").hidden) {
+    networks = data.networks;
+    const keep = chosen();
+    renderList();
+    const again = keep && document.querySelector(`input[name=network][value="${CSS.escape(keep)}"]`);
+    if (again) again.checked = true;
+    refresh();
+  }
+  const bad = data.result && !data.result.ok;
+  $("result").hidden = !bad;
+  if (bad) $("result").textContent = `Couldn't join ${data.result.ssid}. ${data.result.text}`;
+  show("choose");
+  return data;
+}
+
+$("form").addEventListener("change", refresh);
+$("form").addEventListener("input", refresh);
+
+$("show").addEventListener("click", () => {
+  const hidden = $("password").type === "password";
+  $("password").type = hidden ? "text" : "password";
+  $("show").textContent = hidden ? "Hide" : "Show";
+  $("show").setAttribute("aria-pressed", String(hidden));
+});
+
+$("form").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const value = chosen();
+  const other = value === OTHER;
+  const net = networks.find((n) => n.ssid === value);
+  const ssid = other ? $("other").value.trim() : value;
+  const body = { ssid, hidden: other, password: net && !net.secure ? "" : $("password").value };
+  $("problem").hidden = true;
+  $("join").disabled = true;
+  $("trying-name").textContent = ssid;
+  let res = null;
+  try {
+    res = await fetch("/api/setup/join", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  } catch {
+    // The hotspot can go before the answer reaches the phone: that means it's trying.
+  }
+  if (res && !res.ok) {
+    const data = await res.json().catch(() => ({}));
+    $("problem").textContent = data.error || "That didn't work. Try again.";
+    $("problem").hidden = false;
+    refresh();
+    return;
+  }
+  $("password").value = "";
+  show("trying");
+});
+
+load();
+setInterval(load, 20000);  // while this is open, the hotspot stays up
+</script>
+</body>
+</html>

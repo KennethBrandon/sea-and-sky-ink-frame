@@ -1,0 +1,11 @@
+[Unit]
+Description=PhotoPainter: show what the schedule says (tides, photos, night)
+
+[Service]
+Type=oneshot
+User=pi
+WorkingDirectory=/home/pi
+ExecStart=/usr/local/bin/photopainter tick
+# A tick takes a few seconds, or about 40 s when it refreshes the panel (which gives up
+# after 180 s). Kill a hung run so it can't hold up every tick after it.
+TimeoutStartSec=5min

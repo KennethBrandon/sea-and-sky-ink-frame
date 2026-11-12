@@ -1,0 +1,29 @@
+[Unit]
+Description=PhotoPainter: web dashboard (http://<the frame's name>.local)
+# The dashboard is for the Viewer's LAN and the Owner's tailnet only: no login in v1.
+# Never port-forward it or expose it with Tailscale Funnel without adding one first.
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi
+# "::" listens on IPv6 and IPv4 at once (Linux dual-stack). Chrome resolves the .local name
+# to the Pi's IPv6 address first and shows an error page when only IPv4 is listening.
+ExecStart=/usr/local/bin/photopainter serve --host :: --port 80
+# Port 80 without running as root.
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+Restart=on-failure
+RestartSec=5
+# The dashboard starts ticks as child processes. On stop, signal only the server: it waits
+# for a running tick to finish its panel refresh (about 40 s) instead of cutting it short.
+KillMode=mixed
+TimeoutStopSec=5min
+# PRD budget: < 80 MB resident (about 45 MB measured on the Mac); previews and ticks are
+# child processes and count here too, so the cap leaves room for one of each.
+MemoryHigh=200M
+MemoryMax=260M
+
+[Install]
+WantedBy=multi-user.target

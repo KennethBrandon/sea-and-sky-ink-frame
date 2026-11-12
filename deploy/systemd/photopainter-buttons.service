@@ -1,0 +1,20 @@
+[Unit]
+Description=PhotoPainter: the buttons on the back (forward, back, both for low power)
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi
+ExecStart=/usr/local/bin/photopainter buttons
+Restart=on-failure
+RestartSec=5
+# A press starts a tick as a child process. On stop, signal only this service: it waits for a
+# running tick to finish its panel refresh (about 40 s) instead of cutting it short.
+KillMode=mixed
+TimeoutStopSec=5min
+# Small itself, but ticks are children and count here too, so the cap leaves room for one.
+MemoryHigh=200M
+MemoryMax=260M
+
+[Install]
+WantedBy=multi-user.target

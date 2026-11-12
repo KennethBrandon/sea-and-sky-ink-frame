@@ -1,0 +1,12 @@
+[Unit]
+Description=PhotoPainter: run a tick every minute
+
+[Timer]
+# On the minute, so photo slots start at :00. AccuracySec keeps systemd from delaying it
+# (its default allows up to a minute). A tick that finds nothing new to show is quick and
+# leaves the panel alone; the panel itself allows at most one refresh every 3 minutes.
+OnCalendar=*-*-* *:*:00
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target
