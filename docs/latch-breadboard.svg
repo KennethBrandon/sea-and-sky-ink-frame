@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 470" width="760" height="470" font-family="Helvetica, Arial, sans-serif" font-size="11">
+  <title>PhotoPainter latch mod on a breadboard: which leg goes in which hole</title>
+  <rect width="760" height="470" fill="#ffffff"/>
+  <!-- breadboard body: columns 1-26 at x = 60 + (col-1)*24; rows + 40, - 64, a 110 .. e 206, f 250 .. j 346 -->
+  <rect x="40" y="24" width="650" height="340" rx="6" fill="#f3f1ea" stroke="#bbb"/>
+  <rect x="40" y="222" width="650" height="16" fill="#e2dfd5"/>
+  <line x1="48" y1="40" x2="682" y2="40" stroke="#d33" stroke-width="1"/>
+  <line x1="48" y1="64" x2="682" y2="64" stroke="#36c" stroke-width="1"/>
+  <g fill="#fff" stroke="#999" stroke-width="0.8">
+    <!-- rails -->
+    <g id="rail-row">
+      <circle cx="60" cy="40" r="3"/><circle cx="84" cy="40" r="3"/><circle cx="108" cy="40" r="3"/><circle cx="132" cy="40" r="3"/><circle cx="156" cy="40" r="3"/><circle cx="180" cy="40" r="3"/><circle cx="204" cy="40" r="3"/><circle cx="228" cy="40" r="3"/><circle cx="252" cy="40" r="3"/><circle cx="276" cy="40" r="3"/><circle cx="300" cy="40" r="3"/><circle cx="324" cy="40" r="3"/><circle cx="348" cy="40" r="3"/><circle cx="372" cy="40" r="3"/><circle cx="396" cy="40" r="3"/><circle cx="420" cy="40" r="3"/><circle cx="444" cy="40" r="3"/><circle cx="468" cy="40" r="3"/><circle cx="492" cy="40" r="3"/><circle cx="516" cy="40" r="3"/><circle cx="540" cy="40" r="3"/><circle cx="564" cy="40" r="3"/><circle cx="588" cy="40" r="3"/><circle cx="612" cy="40" r="3"/><circle cx="636" cy="40" r="3"/><circle cx="660" cy="40" r="3"/>
+    </g>
+    <use href="#rail-row" y="24"/>
+    <!-- rows a-e and f-j -->
+    <g id="hole-row">
+      <circle cx="60" cy="110" r="3"/><circle cx="84" cy="110" r="3"/><circle cx="108" cy="110" r="3"/><circle cx="132" cy="110" r="3"/><circle cx="156" cy="110" r="3"/><circle cx="180" cy="110" r="3"/><circle cx="204" cy="110" r="3"/><circle cx="228" cy="110" r="3"/><circle cx="252" cy="110" r="3"/><circle cx="276" cy="110" r="3"/><circle cx="300" cy="110" r="3"/><circle cx="324" cy="110" r="3"/><circle cx="348" cy="110" r="3"/><circle cx="372" cy="110" r="3"/><circle cx="396" cy="110" r="3"/><circle cx="420" cy="110" r="3"/><circle cx="444" cy="110" r="3"/><circle cx="468" cy="110" r="3"/><circle cx="492" cy="110" r="3"/><circle cx="516" cy="110" r="3"/><circle cx="540" cy="110" r="3"/><circle cx="564" cy="110" r="3"/><circle cx="588" cy="110" r="3"/><circle cx="612" cy="110" r="3"/><circle cx="636" cy="110" r="3"/><circle cx="660" cy="110" r="3"/>
+    </g>
+    <use href="#hole-row" y="24"/><use href="#hole-row" y="48"/><use href="#hole-row" y="72"/><use href="#hole-row" y="96"/>
+    <use href="#hole-row" y="140"/><use href="#hole-row" y="164"/><use href="#hole-row" y="188"/><use href="#hole-row" y="212"/><use href="#hole-row" y="236"/>
+  </g>
+  <!-- labels: rows and columns -->
+  <g fill="#666" font-size="10">
+    <text x="30" y="44" text-anchor="end" fill="#d33" font-weight="bold">+ SYS</text>
+    <text x="30" y="68" text-anchor="end" fill="#36c" font-weight="bold">− GND</text>
+    <text x="30" y="114" text-anchor="end">a</text><text x="30" y="138" text-anchor="end">b</text><text x="30" y="162" text-anchor="end">c</text><text x="30" y="186" text-anchor="end">d</text><text x="30" y="210" text-anchor="end">e</text>
+    <text x="30" y="254" text-anchor="end">f</text><text x="30" y="278" text-anchor="end">g</text><text x="30" y="302" text-anchor="end">h</text><text x="30" y="326" text-anchor="end">i</text><text x="30" y="350" text-anchor="end">j</text>
+    <text x="60" y="96" text-anchor="middle">1</text><text x="108" y="96" text-anchor="middle">3</text><text x="156" y="96" text-anchor="middle">5</text><text x="180" y="96" text-anchor="middle">6</text><text x="276" y="96" text-anchor="middle">10</text><text x="324" y="96" text-anchor="middle">12</text><text x="348" y="96" text-anchor="middle">13</text><text x="372" y="96" text-anchor="middle">14</text><text x="444" y="96" text-anchor="middle">17</text><text x="492" y="96" text-anchor="middle">19</text><text x="564" y="96" text-anchor="middle">22</text><text x="636" y="96" text-anchor="middle">25</text><text x="660" y="96" text-anchor="middle">26</text>
+  </g>
+  <!-- wires -->
+  <g stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <!-- INT lead into 10a (from the left) -->
+    <polyline points="276,110 276,86 240,86 240,8" stroke="#e6a100"/>
+    <!-- BCM 6 lead from 6a -->
+    <polyline points="180,110 180,80 196,80 196,8" stroke="#8b4dc9"/>
+    <!-- BCM 5 lead from 5a -->
+    <polyline points="156,110 156,96 144,96 144,8" stroke="#2a9d8f"/>
+    <!-- Qa emitter 12a to - rail -->
+    <line x1="324" y1="110" x2="324" y2="64" stroke="#36c"/>
+    <!-- Qb collector 19a to + rail -->
+    <line x1="492" y1="110" x2="492" y2="40" stroke="#d33"/>
+    <!-- node A: 14d to 18a -->
+    <polyline points="372,182 372,196 420,196 420,86 468,86 468,110" stroke="#000"/>
+    <!-- GATE lead from 22a -->
+    <polyline points="564,110 564,80 580,80 580,8" stroke="#000"/>
+    <!-- HOLD lead from 25a -->
+    <polyline points="636,110 636,96 648,96 648,8" stroke="#2a9d8f"/>
+    <!-- switch: 6b along row b to column 3, then up to the - rail (a jumper while testing) -->
+    <polyline points="180,134 108,134 108,64" stroke="#36c" stroke-dasharray="5 4"/>
+    <!-- button ground: 5g around the left edge to the - rail -->
+    <polyline points="156,274 48,274 48,64 60,64" stroke="#36c"/>
+    <!-- SYS lead into the + rail (left end), GND lead into the - rail (right end) -->
+    <polyline points="60,40 60,8" stroke="#d33"/>
+    <polyline points="660,64 700,64 700,8" stroke="#36c"/>
+  </g>
+  <!-- resistors -->
+  <g stroke="#000" stroke-width="1.5" fill="#f7d8a8">
+    <!-- R1 100k: 10b to + rail -->
+    <line x1="276" y1="134" x2="276" y2="40" stroke="#000"/>
+    <rect x="270" y="72" width="12" height="36"/>
+    <!-- R3 100k: 14b to + rail -->
+    <line x1="372" y1="134" x2="372" y2="40" stroke="#000"/>
+    <rect x="366" y="72" width="12" height="36"/>
+    <!-- R2 10k: 10e to 13e -->
+    <line x1="276" y1="206" x2="348" y2="206" stroke="#000"/>
+    <rect x="296" y="200" width="32" height="12"/>
+  </g>
+  <!-- diodes: body with a band at the cathode -->
+  <g stroke="#000" stroke-width="1.5">
+    <!-- D3: 10c (anode) to 6c (cathode) -->
+    <line x1="276" y1="158" x2="180" y2="158"/>
+    <rect x="208" y="152" width="40" height="12" fill="#333"/><rect x="210" y="152" width="5" height="12" fill="#ddd"/>
+    <!-- D4: 10d (anode) to 5d (cathode) -->
+    <line x1="276" y1="182" x2="156" y2="182"/>
+    <rect x="196" y="176" width="40" height="12" fill="#333"/><rect x="198" y="176" width="5" height="12" fill="#ddd"/>
+    <!-- D1: 17d (anode) to 22d (cathode) -->
+    <line x1="444" y1="182" x2="564" y2="182"/>
+    <rect x="484" y="176" width="40" height="12" fill="#333"/><rect x="517" y="176" width="5" height="12" fill="#ddd"/>
+    <!-- D2: 25c (anode) to 22c (cathode) -->
+    <line x1="636" y1="158" x2="564" y2="158"/>
+    <rect x="580" y="152" width="40" height="12" fill="#333"/><rect x="582" y="152" width="5" height="12" fill="#ddd"/>
+  </g>
+  <!-- transistors: flat face toward the bottom edge, legs E B C in row c -->
+  <g stroke="#000" stroke-width="1.5" fill="#444">
+    <path d="M 324 158 L 324 146 A 24 24 0 0 1 372 146 L 372 158 Z"/>
+    <path d="M 444 158 L 444 146 A 24 24 0 0 1 492 146 L 492 158 Z"/>
+  </g>
+  <!-- button straddling the channel at columns 3 and 5 -->
+  <rect x="100" y="214" width="64" height="44" rx="4" fill="#888" stroke="#000" stroke-width="1.5"/>
+  <circle cx="132" cy="236" r="10" fill="#c33" stroke="#000"/>
+  <!-- component labels -->
+  <g fill="#000" font-size="11">
+    <text x="284" y="80">R1 100k</text>
+    <text x="380" y="80">R3 100k</text>
+    <text x="292" y="221" font-size="10">R2 10k</text>
+    <text x="206" y="148" font-size="10">D3 (band left)</text>
+    <text x="196" y="196" font-size="10">D4 (band left)</text>
+    <text x="482" y="196" font-size="10">D1 (band right)</text>
+    <text x="578" y="148" font-size="10">D2 (band left)</text>
+    <text x="348" y="140" text-anchor="middle" fill="#fff" font-weight="bold" font-size="10">Qa</text>
+    <text x="468" y="140" text-anchor="middle" fill="#fff" font-weight="bold" font-size="10">Qb</text>
+    <text x="320" y="172" font-size="9">E</text><text x="344" y="172" font-size="9">B</text><text x="368" y="172" font-size="9">C</text>
+    <text x="440" y="172" font-size="9">E</text><text x="464" y="172" font-size="9">B</text><text x="488" y="172" font-size="9">C</text>
+    <text x="132" y="212" text-anchor="middle" font-size="10">next button</text>
+    <text x="112" y="150" font-size="10" fill="#36c">switch: 6b to −</text>
+    <text x="112" y="162" font-size="9" fill="#36c">(jumper for testing)</text>
+  </g>
+  <!-- lead labels at the top -->
+  <g font-size="10" font-weight="bold">
+    <text x="60" y="20" fill="#d33" text-anchor="middle">SYS</text>
+    <text x="700" y="20" fill="#36c" text-anchor="middle">GND</text>
+    <text x="144" y="20" fill="#2a9d8f" text-anchor="middle">BCM 5</text>
+    <text x="196" y="20" fill="#8b4dc9" text-anchor="middle">BCM 6</text>
+    <text x="240" y="20" fill="#e6a100" text-anchor="middle">INT</text>
+    <text x="580" y="20" text-anchor="middle">GATE</text>
+    <text x="648" y="20" fill="#2a9d8f" text-anchor="middle">HOLD</text>
+  </g>
+  <!-- notes -->
+  <g fill="#333" font-size="11">
+    <text x="40" y="386">Rails: the top red rail is SYS, the blue rail under it is GND. Wires and resistor legs drawn up to the red rail pass over the blue rail's holes without touching them.</text>
+    <text x="40" y="404">Transistors: flat face toward you (the bottom edge), legs splayed into three columns of row c: E, B, C. Diodes: the band marks the cathode.</text>
+    <text x="40" y="422">Button: a 4-leg tactile switch straddling the channel, legs in 3e, 5e, 3f, 5f. The two legs on the same side are joined inside; pressing joins the two sides.</text>
+    <text x="40" y="440">Leads from the frame: SYS and GND into the rails; INT to 10a; BCM 6 to 6a; BCM 5 to 5a; GATE from 22a; HOLD from 25a.</text>
+    <text x="40" y="458">Mode switch: a toggle between 6b and the GND rail; while testing, a jumper wire plugged in (awake) or pulled out (low power) does the same.</text>
+  </g>
+</svg>
