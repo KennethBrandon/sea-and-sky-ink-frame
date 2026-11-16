@@ -357,6 +357,11 @@ with a red X, which goes away at the first redraw once it's back online. The mar
 refresh of its own. It doesn't appear when the router is up but the internet is down, or in low
 power mode, where Wi-Fi is turned off deliberately.
 
+Sometimes a Raspberry Pi stays on its network while nothing gets through. A watchdog checks for the
+internet every minute. After 20 minutes without it, the frame turns its Wi-Fi off and on. After 90,
+if the problem looks like the frame's own rather than the house's internet, it restarts itself, at
+most every 6 hours.
+
 If the network changes for good, with a new router, a new password or a move, the frame can't
 reconnect without help. **Hold Back for a second** and it starts its own hotspot with a new
 password and shows a QR code. Scan it, tap Join, and the setup page lists the networks the frame
@@ -379,6 +384,7 @@ running.
 | When this happens | What the frame does |
 |---|---|
 | **The Wi-Fi goes out** | Keeps running from its caches, which hold at least two weeks of tides, and reconnects when the network is back. A small mark appears after 10 minutes. Weather more than 12 hours old is left off the screen |
+| **The Wi-Fi gets stuck** | Resets its Wi-Fi after 20 minutes without the internet, and restarts itself after 90 if that didn't help |
 | **The Wi-Fi changes for good** | Hold Back for a second, scan the code and pick the network |
 | **A data source goes down** | Keeps the last good data and retries every 5 minutes |
 | **The power goes out** | The picture stays on the panel with no power at all. With a battery fitted, the frame keeps running |
@@ -569,6 +575,7 @@ and another coastline would need its own versions.
 - **The harbor chart is not for navigation.**
 - **The clock needs the network after a power cut** until an RTC coin cell is fitted.
 - **Wi-Fi setup is new.** On the frame, the QR code was up 39 seconds after the button was held, and an Android phone joined from it. An iPhone, and joining a network from the setup page, haven't been tested yet.
+- **The Wi-Fi watchdog is new.** Its checks run every minute, but a reset or a restart hasn't happened on the frame yet. Wi-Fi power saving is off for it, which costs a little battery time.
 
 ---
 

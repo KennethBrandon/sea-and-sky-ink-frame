@@ -57,6 +57,20 @@ ssh "$HOST" "set -e
   sudo install -m 644 $DEST/deploy/systemd/*.service $DEST/deploy/systemd/*.timer /etc/systemd/system/
   sudo systemctl daemon-reload
   sudo install -D -m 644 $DEST/deploy/network/photopainter-captive.conf /etc/NetworkManager/dnsmasq-shared.d/photopainter-captive.conf
+  # Wi-Fi power saving off: from the next network joined, and for the one it's on now.
+  if ! cmp -s $DEST/deploy/network/photopainter-wifi.conf /etc/NetworkManager/conf.d/90-photopainter-wifi.conf; then
+    sudo install -D -m 644 $DEST/deploy/network/photopainter-wifi.conf /etc/NetworkManager/conf.d/90-photopainter-wifi.conf
+    sudo nmcli general reload conf
+    sudo iw dev wlan0 set power_save off 2>/dev/null || true
+    echo 'Wi-Fi power saving is off.'
+  fi
+  # The journal kept across restarts (Raspberry Pi OS keeps it in memory only).
+  if ! cmp -s $DEST/deploy/journald/90-photopainter.conf /etc/systemd/journald.conf.d/90-photopainter.conf; then
+    sudo install -D -m 644 $DEST/deploy/journald/90-photopainter.conf /etc/systemd/journald.conf.d/90-photopainter.conf
+    sudo systemctl restart systemd-journald
+    sudo journalctl --flush
+    echo 'The journal is now kept across restarts.'
+  fi
   python3 -c 'import segno' 2>/dev/null || echo 'No QR code on the Wi-Fi setup screen until: sudo apt install -y --no-install-recommends python3-segno'"
 
 # Each tick starts fresh, but the dashboard and the buttons run the old code until they're

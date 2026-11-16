@@ -133,6 +133,15 @@ With the frame offline Tailscale is gone too, so this is the one way back withou
 phone it comes down to "hold the back button and do what the screen says". The dashboard's Frame > Wi-Fi
 networks sets a line for that screen, such as who to call.
 
+A connection that's up but passes nothing is the watchdog's (`src/photopainter/watchdog.py`): after
+20 minutes without the internet it turns the radio off and on, and after 90, if the frame itself
+looks at fault, it restarts the Pi. `~/.cache/photopainter/wifi.csv` has a line a minute: the network,
+its signal, and whether the router and the internet answered. `scripts/deploy.sh` also installs two
+files: `deploy/network/photopainter-wifi.conf` turns Wi-Fi power saving off, and
+`deploy/journald/90-photopainter.conf` keeps the journal across restarts, which Raspberry Pi OS
+doesn't by default (`journalctl -b -1` shows the boot before this one). To keep the watchdog from
+resetting or restarting anything: `sudo touch /boot/firmware/photopainter-no-watchdog`.
+
 ## Packages
 
 The code runs on apt's Python packages; there is no pip or venv on the Pi (see

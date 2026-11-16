@@ -135,3 +135,16 @@ def test_a_busy_dashboard_stops_the_deploy_before_the_buttons(deploy):
     result, log = deploy(busy_checks=100_000, buttons_running=True)
     assert result.returncode != 0
     assert RESTART not in log and RESTART_BUTTONS not in log
+
+
+def test_wifi_power_saving_goes_off_and_the_journal_is_kept(deploy):
+    result, log = deploy()
+    assert result.returncode == 0, result.stderr
+    remote = "\n".join(log)
+    assert "/etc/NetworkManager/conf.d/90-photopainter-wifi.conf" in remote
+    assert "iw dev wlan0 set power_save off" in remote
+    assert "/etc/systemd/journald.conf.d/90-photopainter.conf" in remote
+    assert "systemctl restart systemd-journald" in remote
+    repo = Path(__file__).resolve().parents[1]
+    assert "wifi.powersave = 2" in (repo / "deploy" / "network" / "photopainter-wifi.conf").read_text()
+    assert "Storage=persistent" in (repo / "deploy" / "journald" / "90-photopainter.conf").read_text()

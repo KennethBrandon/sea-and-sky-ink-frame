@@ -20,7 +20,9 @@ it right after an action). Each run (PRD.md §4):
      power cut like any other, and the Pi boots when the power returns.
    Then Wi-Fi (`hotspot.py`): whether the frame is on it, for status.json `wifi` and the no-Wi-Fi
    mark on screens drawn from then on, and one step of the setup hotspot, whose screens go
-   up in place of the schedule's while someone is using it.
+   up in place of the schedule's while someone is using it. Then the watchdog (`watchdog.py`):
+   whether the internet answers, a line in `wifi.csv`, and whether to reset Wi-Fi or restart
+   the Pi, which waits for the end of the tick (step 8). With no internet, no fetching.
 3. Check the clock. Until NTP has set it, keep the current image; after 10 minutes show photos,
    a new one an hour, since they're the one screen that doesn't need the time, or a "Clock not
    set" message if there are none. (There's no RTC yet; H2 adds it.)
@@ -34,6 +36,8 @@ it right after an action). Each run (PRD.md §4):
    power the indicator goes at the next redraw, with no refresh of its own.
 7. Save `current.png` (the exact inks sent, as `preview_image` colors) and status.json.
    After a photo: move the rotation on, or take the photo off Up next.
+8. The watchdog's step, if it decided one: a Wi-Fi reset before status.json is saved, a restart
+   after, once it's on disk.
 
 When something goes wrong the panel keeps its image, status.json says why, and the next
 tick tries again (PRD.md §3 "When things go wrong"):
@@ -63,7 +67,7 @@ from typing import Any
 
 import numpy as np
 
-from photopainter import hotspot, power, state
+from photopainter import hotspot, power, state, watchdog
 from photopainter.config import Config, load_config
 from photopainter.hardware.battery import Battery, BatteryReader, BatteryUnavailable, FakeBattery, Reading
 from photopainter.hardware.fake import FakePanel
@@ -114,19 +118,22 @@ def main(*, fake_panel: bool = False, at: datetime | None = None) -> int:
     network = hotspot.FakeNetwork(folder) if fake_panel else hotspot.Nmcli()
     runner = power.log_only if fake_panel else power.run_action
     panel = FakePanel(folder) if fake_panel else PanelDisplay(state_dir=folder)
+    # A simulated moment on the real frame mustn't reset its Wi-Fi or restart it.
+    watch: watchdog.Watch | None = watchdog.Fake(folder) if fake_panel else None if at is not None else watchdog.Pi()
     if at is not None:
         if at.tzinfo is None or at.utcoffset() is None:
             raise ValueError(f"naive datetime {at!r}: --at needs a time zone")
         return run(at, panel, fetch=False, clock_ok=True, wall=lambda: at, battery=battery, power_runner=runner,
-                   network=network)
+                   network=network, watch=watch)
     return run(datetime.now(timezone.utc), panel, clock_ok=clock_synced() is not False,
-               uptime_s=seconds_since_boot(), battery=battery, power_runner=runner, network=network)
+               uptime_s=seconds_since_boot(), battery=battery, power_runner=runner, network=network, watch=watch)
 
 
 def run(now: datetime, panel: PanelDisplay, *, fetch: bool = True,
         clock_ok: bool = True, uptime_s: float | None = None, sun: SunTimes | None = None,
         wall: Callable[[], datetime] | None = None, battery: BatteryReader | None = None,
-        power_runner: power.Runner | None = None, network: hotspot.Network | None = None) -> int:
+        power_runner: power.Runner | None = None, network: hotspot.Network | None = None,
+        watch: watchdog.Watch | None = None) -> int:
     """One tick at `now` on `panel`. 0 = fine (including nothing to do and quiet
     hours); 1 = something failed, and status.json `last_error` says what.
 
@@ -135,7 +142,8 @@ def run(now: datetime, panel: PanelDisplay, *, fetch: bool = True,
     place, cached in sun.json); `wall`: the time for status stamps (default: the real clock);
     `battery`: where to read the battery (default: none, so status.json says null);
     `power_runner`: what runs the low-power actions (default: only logs them);
-    `network`: the Wi-Fi radio (default: none, so status.json says null and there's no hotspot).
+    `network`: the Wi-Fi radio (default: none, so status.json says null and there's no hotspot);
+    `watch`: the watchdog's checks and steps (default: none, so no checks, no log, no steps).
     """
     with ExitStack() as stack:
         try:
@@ -143,8 +151,8 @@ def run(now: datetime, panel: PanelDisplay, *, fetch: bool = True,
         except TimeoutError:
             log.warning("another tick has run for over %d s; skipping this one", TICK_LOCK_TIMEOUT_S)
             return 0
-        return _Tick(now, panel, fetch=fetch, clock_ok=clock_ok, uptime_s=uptime_s,
-                     sun=sun, wall=wall, battery=battery, power_runner=power_runner, network=network).run()
+        return _Tick(now, panel, fetch=fetch, clock_ok=clock_ok, uptime_s=uptime_s, sun=sun, wall=wall,
+                     battery=battery, power_runner=power_runner, network=network, watch=watch).run()
     return 1  # unreachable (ExitStack doesn't swallow exceptions); keeps type checkers happy
 
 
@@ -208,7 +216,8 @@ class _Tick:
     def __init__(self, now: datetime, panel: PanelDisplay, *, fetch: bool,
                  clock_ok: bool, uptime_s: float | None, sun: SunTimes | None,
                  wall: Callable[[], datetime] | None, battery: BatteryReader | None,
-                 power_runner: power.Runner | None = None, network: hotspot.Network | None = None):
+                 power_runner: power.Runner | None = None, network: hotspot.Network | None = None,
+                 watch: watchdog.Watch | None = None):
         self.dir = state.state_dir()
         self.config, self.config_error = load_config()
         self.tz = self.config.location.tz
@@ -220,6 +229,9 @@ class _Tick:
         self.battery = battery
         self.power_runner = power_runner or power.log_only
         self.network = network
+        self.watch = watch
+        self.watch_step: watchdog.Step | None = None  # the watchdog's step, taken at the end of the tick
+        self.watch_entry: tuple[watchdog.Radio, watchdog.Check, str] | None = None  # this tick's wifi.csv line
         self.no_wifi = False  # True: screens drawn now carry the no-Wi-Fi mark
         self.network_ok = True  # False: Wi-Fi is off, or was just switched on: don't fetch this tick
         self.sync_after = False  # True: flush the SD card after saving (the battery is low)
@@ -268,14 +280,24 @@ class _Tick:
             log.exception("tick failed")
             self.error("tick", f"{type(exc).__name__}: {exc}")
             code = 1
+        try:
+            reboot = self._watch_act()
+        except Exception:  # noqa: BLE001 - the tick's status matters more
+            log.exception("watchdog: its step failed")
+            reboot = False
         self.status["refreshing"] = None
         try:
             self.save()
         except Exception:  # noqa: BLE001
             log.exception("couldn't write %s", state.STATUS)
-            code = 1
-        if self.sync_after:
+            code, reboot = 1, False  # without its time on disk, a restart could repeat
+        if self.sync_after or reboot:
             os.sync()
+        if reboot and self.watch is not None:
+            try:
+                self.watch.reboot()
+            except Exception:  # noqa: BLE001
+                log.exception("watchdog: the restart failed")
         return code
 
     def _run(self) -> None:
@@ -287,6 +309,7 @@ class _Tick:
         self._power(reading)
         low = reading is not None and self._is_low(reading)
         setup = self._hotspot(low)
+        self._watch(low)
         if low:
             self._low_battery(reading)
             return
@@ -475,6 +498,66 @@ class _Tick:
         self.no_wifi = down and not hotspot_on and hotspot.mark_due(since, self.now)
         self.status["wifi"] = {"connected": connected, "down_since": since, "mark": self.no_wifi,
                                "hotspot": hotspot_on}
+
+    def _watch(self, low_battery: bool) -> None:
+        """The watchdog's check and decision (watchdog.py) into status.json `wifi`: `internet` and
+        `watchdog`. Paused while Wi-Fi is off or busy on purpose. The step itself waits for the end
+        of the tick (`_watch_act`). With no internet this tick doesn't fetch. Nothing here is
+        worth failing the tick."""
+        wifi = self.status["wifi"]
+        prev = (self.prev_wifi or {}).get("watchdog")
+        if self.watch is None:
+            if isinstance(wifi, dict) and isinstance(prev, dict):  # keep its restart time for the next real tick
+                wifi["watchdog"] = prev
+            return
+        wifi = wifi if isinstance(wifi, dict) else {}
+        paused = ("low battery" if low_battery
+                  else "low power" if (self.status["power"] or {}).get("mode") == "low"
+                  else "setup hotspot" if wifi.get("hotspot") else None)
+        try:
+            step = None
+            if paused is not None:
+                check, new = watchdog.Check(), watchdog.pause(prev)
+            else:
+                check = self.watch.check(watchdog.remembered(prev))
+                if check.link is None:  # no radio here, like the Mac
+                    return
+                new, step = watchdog.decide(prev, check, self.now, uptime_s=self.watch.uptime_s(),
+                                            enabled=self.watch.enabled(), heard_saved=self.watch.heard_saved)
+            radio = self.watch.radio()
+        except Exception as exc:  # noqa: BLE001
+            self.error("watchdog", f"{type(exc).__name__}: {exc}", level=logging.WARNING)
+            return
+        if check.internet is False:
+            self.network_ok = False
+        self.status["wifi"] = {**wifi, "internet": check.internet, "watchdog": new}
+        self.watch_step = step
+        self.watch_entry = (radio, check, "" if paused is None else f"paused: {paused}")
+
+    def _watch_act(self) -> bool:
+        """Take the watchdog's step, if it decided one, and add this tick's line to wifi.csv.
+        True: restart the Pi once status.json is on disk."""
+        if self.watch_entry is None or self.watch is None:
+            return False
+        radio, check, note = self.watch_entry
+        step, reboot = self.watch_step, False
+        if step is not None and step.kind == "reset":
+            log.warning("watchdog: %s: resetting Wi-Fi", step.why)
+            try:
+                note = f"reset ({step.why}): {self.watch.reset()}"
+            except Exception as exc:  # noqa: BLE001
+                note = f"reset ({step.why}) failed: {type(exc).__name__}: {exc}"
+            log.warning("watchdog: %s", note)
+        elif step is not None and step.kind == "reboot":
+            note, reboot = f"restart: {step.why}", True
+            since = (self.status["wifi"] or {}).get("watchdog", {}).get("offline_since")
+            log.warning("watchdog: no internet since %s and %s: restarting the Pi",
+                        f"{since:%Y-%m-%d %H:%M}" if isinstance(since, datetime) else since, step.why)
+        try:
+            watchdog.append_log(self.dir, watchdog.log_line(self.stamp(), radio, check, note))
+        except OSError as exc:
+            log.warning("couldn't write %s: %s", watchdog.LOG, exc)
+        return reboot
 
     def _show_setup(self, setup: hotspot.Outcome) -> None:
         showing = self.status["showing"]

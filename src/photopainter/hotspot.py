@@ -1,7 +1,8 @@
 """No Wi-Fi: knowing it's gone, the mark on the screen, and the setup hotspot.
 
 **An outage needs nobody.** Tides are cached for weeks, and photos and the sky are local, so
-the frame carries on, and NetworkManager joins a saved network again when it comes back. Nothing
+the frame carries on, and NetworkManager joins a saved network again when it comes back. When it
+doesn't, or the connection is up and passes nothing, the watchdog steps in (`watchdog.py`). Nothing
 here turns the hotspot on by itself, because the radio can't look for the home network while
 it's up. After `MARK_AFTER_MINUTES` without Wi-Fi the screens drawn from then on carry a small
 mark (`render/battery_badge.py`), with no refresh of its own, and it goes at the next redraw
