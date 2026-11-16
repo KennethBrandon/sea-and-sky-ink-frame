@@ -36,7 +36,8 @@ and a nearly flat one settles on a photo (`hardware/battery.py`, 2026-11-04;
 `render/battery_badge.py`, 2026-11-06); the frame stays plugged in and the pack is a UPS, since the board
 can't wake the Pi (see "Power and battery rules"). Two buttons on the back step through the
 schedule's screens, a long press of forward switches to photos only and back, and both held turn
-low power on or off (`buttons.py`, wired 2026-11-06). The RTC coin cell is still to do (H2).
+low power on or off (`buttons.py`, wired 2026-11-06). A watchdog gets the frame back online by itself
+when its connection is stuck (`watchdog.py`, H10, 2026-11-15). The RTC coin cell is still to do (H2).
 Sections marked *(planned)* describe intended design; keep this file true to what
 is actually in the repo.
 
@@ -60,11 +61,12 @@ code. It has the pin map, palette, driver quirks and sources.
 Each panel update is one short-lived run. Only that run drives the panel:
 
 ```
-systemd timer (1 min, on the minute) → photopainter tick: config → clock check
-  → sources.ensure_all_fresh() → overrides.json → schedule.decide() → scene key changed
+systemd timer (1 min, on the minute) → photopainter tick: config → battery, Wi-Fi and the
+  watchdog's internet check → clock check → sources.ensure_all_fresh() (skipped with no internet)
+  → overrides.json → schedule.decide() → scene key changed
   (and not quiet hours)? → render scene → incoming.png (the dashboard flashes the old picture
   for 15 s, then this one, as the panel does) → panel refresh → panel deep sleep
-  → current.png + status.json
+  → the watchdog's Wi-Fi reset, if due → current.png + status.json → its restart, if due
 photopainter serve (photopainter-web.service, always running): the dashboard. An action
   writes overrides.json or config.json → starts `photopainter tick` in the background
   (one at a time, one queued) → the tick does the rest. Previews are drawn by `photopainter
@@ -108,6 +110,8 @@ src/photopainter/
                     #   since low power stops the dashboard
   hotspot.py        # no Wi-Fi: whether the frame is on it (link_up), when the mark is due, the
                     #   setup hotspot's steps (advance -> Outcome), Nmcli on the Pi, FakeNetwork
+  watchdog.py       # the Wi-Fi watchdog: an internet check each tick, wifi.csv, decide() -> a Wi-Fi
+                    #   reset or a restart; Pi (checks, nmcli, reboot), Fake (fake_wifi.json)
   astro/            # Skyfield, loaded lazily; ephemeris = data/de421.bsp, no downloads
     sun.py          # sun_events(): sunrise, sunset, civil dawn/dusk for a day and place
     moments.py      # moment_at(): named moments of a day for previews (sunset, dusk, moon…)
@@ -223,7 +227,9 @@ scripts/
 deploy/systemd/     # photopainter-tick.service + .timer (every minute, on the minute),
                     #   photopainter-web.service (the dashboard on port 80, as pi)
                     #   photopainter-buttons.service (the buttons, as pi)
-deploy/network/     # photopainter-captive.conf: the hotspot's DNS answers every name with the frame
+deploy/network/     # photopainter-captive.conf: the hotspot's DNS answers every name with the frame;
+                    #   photopainter-wifi.conf: Wi-Fi power saving off (NetworkManager conf.d)
+deploy/journald/    # 90-photopainter.conf: the journal kept across restarts, 100 MB at most
 docs/               # hardware.md, pi-setup.md; images/ (README.md's pictures, not deployed; samples/
                     #   are public-domain photos, credited in README.md: personal photos stay out of git)
 ```
@@ -266,11 +272,15 @@ anything off-palette was drawn. `render_scene` checks every screen's size and in
   `overrides.json` (pins and Up next, for the dashboard), `sun.json`
   (sun times by day, so a tick that changes nothing doesn't load Skyfield),
   `photo-previews/` (the dashboard's dithered photo tiles, drawn once each),
-  `battery.csv` (a reading a minute, about the last five days), `hotspot.json` (the setup
+  `battery.csv` (a reading a minute, about the last five days), `wifi.csv` (the watchdog's line a
+  minute: network, access point, signal, whether names, the internet and the router answer, and
+  any step; about five days), `hotspot.json` (the setup
   hotspot's state and, while it's up, its password) and `fake_battery.json` and `fake_wifi.json`
-  (only `--fake-panel` runs, written by hand to simulate a battery or no Wi-Fi). Deleted photos go to
+  (only `--fake-panel` runs, written by hand to simulate a battery, no Wi-Fi or no internet). Deleted photos go to
   `~/photos/.trash/`. Logs: `journalctl -u photopainter-tick` (a tick that changes nothing
-  logs nothing) and `journalctl -u photopainter-web` (the dashboard and the ticks it starts).
+  logs nothing) and `journalctl -u photopainter-web` (the dashboard and the ticks it starts),
+  kept across restarts since 2026-11-15 (Raspberry Pi OS keeps them in memory only; `deploy.sh`
+  installs `deploy/journald/`); `journalctl -b -1` is the boot before this one.
 - The Pi's networking is NetworkManager with netplan behind it: the network from
   `flash-sd.sh` is a netplan profile (`/etc/netplan/90-NM-*.yaml`, generated under `/run`),
   and the ones the dashboard saves (Frame > Wi-Fi networks, `web/wifi.py`) are keyfiles
@@ -665,6 +675,25 @@ and the frame stays plugged in (PRD.md D1). What's built:
   dashboard's journal says what phones on the hotspot asked for (`hotspot: ...`). To simulate it: `echo '{"connected": false}' > $S/fake_wifi.json`, then
   `photopainter press wifi-setup --fake-panel` and open `/setup` on `serve --fake-panel`
   (`"join_error": "wrong_password"` makes a try fail).
+- **The watchdog** (Owner, 2026-11-15; `watchdog.py` has the rules). From 2026-11-12 the frame at
+  the Viewer's house couldn't reach the internet for 3½ days, plugged in and running, its Wi-Fi up
+  with an address (so no red X), until a restart fixed it at once. The restart erased the logs, so
+  the cause isn't known: the Wi-Fi chip, the router, or DNS, which goes through Tailscale
+  (resolv.conf is its 100.100.100.100). Low power wasn't it: the battery log showed USB power
+  throughout. Each tick now opens a TCP connection to a data source's host (nothing sent), pings the
+  router only when that fails, and adds a line to `wifi.csv`. 20 minutes without the internet: a
+  Wi-Fi reset (radio off and on, then the strongest saved network it hears, by name), again every
+  2 h. 90 minutes, a reset tried, and the fault the frame's own (its router silent, names failing
+  while a remembered address answers, or on no network with a saved one in range): a restart, after
+  30 minutes up and at most every 6 h. Never a restart for the house's internet, which a restart
+  can't fix and which would cost the clock until NTP is back (photos only, no RTC yet). With no
+  internet the tick doesn't fetch. Paused in low power, with the setup hotspot up and on a nearly
+  flat battery. `deploy.sh` also turns Wi-Fi power saving off (on by default on the Pi, a known
+  cause of dropouts; the frame draws a little more for it on the battery) and keeps the journal.
+  `/boot/firmware/photopainter-no-watchdog` turns the steps off, not the checks or the log. To
+  simulate it: `echo '{"connected": true, "internet": false, "router": false}' > $S/fake_wifi.json`,
+  then `tick --fake-panel --at` a minute apart (`watchdog.Fake` lists the other switches). A reset
+  and a restart haven't happened on the Pi yet.
 - **Help on the dashboard** (Owner, 2026-11-07): a box saying in plain words what the buttons do, for
   the Viewer, with a drawing of the frame's back, measured from the Owner's photo: the black plate, the
   Pi, the stand and the buttons to scale (`docs/hardware.md` "Buttons"). Their labels sit above the frame

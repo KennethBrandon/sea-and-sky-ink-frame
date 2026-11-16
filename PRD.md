@@ -119,6 +119,7 @@ default works out to 6 refreshes an hour by day and 1 at night.
 | Invalid config file | Uses built-in defaults, reports the error on the dashboard |
 | A screen fails to render | Shows the previous image; reports the error; tries again next tick |
 | No Wi-Fi | Keeps going, as with no internet, and reconnects by itself: an outage never needs anyone. After 10 min, screens drawn from then on carry a small mark (D14) |
+| Wi-Fi up, nothing getting through | The watchdog (`watchdog.py`, H10): with no internet for 20 min it resets Wi-Fi, and after 90 min, if the fault is the frame's own and not the house's internet, it restarts the Pi (at most every 6 h). Each minute's check goes in `wifi.csv` |
 | New router, new password or new house | The same, until someone holds the Back button: a hotspot and a QR code set up the new network from a phone (`hotspot.py`, H4) |
 | Web server crashes | Schedule keeps running (separate process); systemd restarts the server |
 
@@ -335,7 +336,8 @@ there only while the rotation is moved; the dashboard's Auto and the long press 
   "battery": {"volts": 3.72, "milliamps": -181.0, "state": "discharging", "percent": 29,
               "on_battery_since": "…", "indicator": false, "low": false, "read_at": "…"},
   "power": {"mode": "low", "wifi": "off", "since": "…", "window_until": null, "next_window_at": "…"},
-  "wifi": {"connected": false, "down_since": "…", "mark": true, "hotspot": false},
+  "wifi": {"connected": false, "down_since": "…", "mark": true, "hotspot": false, "internet": false,
+           "watchdog": {"offline_since": "…", "reset_at": null, "reboot_at": null, "addresses": ["…"]}},
   "data": {"tides_fetched_at": "…", "tides_until": "2026-12-15",
            "config_error": null, "clock_ok": true}
 }
@@ -358,7 +360,10 @@ window is open, else `next_window_at`. `null` before the first tick with the fea
 Wi-Fi is off on purpose in low power; `down_since` when it went, kept while the hotspot is up; `mark`
 whether screens drawn now carry the no-Wi-Fi mark; `hotspot` whether the setup hotspot is up. `showing`
 says which image on the wall has it (`no_wifi`). The hotspot's own state, with its password, is in
-`hotspot.json` and never in the status.
+`hotspot.json` and never in the status. `internet` is the watchdog's check (`watchdog.py`): null when
+it didn't check (no radio, or paused). `watchdog` is its state: `offline_since` the start of an outage,
+`reset_at` its last Wi-Fi reset, `reboot_at` its last restart (kept across outages and restarts), and
+`addresses` the last ones that answered, tried by address when names don't resolve.
 
 ### Tide cache (`tides.json`)
 
@@ -823,6 +828,7 @@ reflection-free RAW photo, for a better green.
 | H7 | Battery: readings on the dashboard, battery indicator, a last photo when low | a Li-ion pack | done (2026-11-05): pack fitted (re-pinned, it came reversed), charges at about 2 A from flat, runs the frame at 0.2 A; run-down 2026-11-07: 10 h 42 min, cut out at 3.00 V |
 | H8 | Buttons: forward and back through the schedule, a long press for photos only, both held for low power (`buttons.py`, `photopainter-buttons.service`) | H7 | done (2026-11-06): wired to P1 and running. The low-power mark's look and place are the defaults until the Owner picks |
 | H9 | Help on the dashboard: what the buttons do, in words and a drawing of the frame's back (`web/static/`) | H8 | done (2026-11-07) |
+| H10 | Wi-Fi watchdog: an internet check each minute into `wifi.csv`, a Wi-Fi reset and then a restart when the frame's connection is stuck; Wi-Fi power saving off; the journal kept across restarts (`watchdog.py`, `deploy/`) | H4 | built (2026-11-15), after a 3½-day outage at the Viewer's house that a restart ended |
 
 - **H1:** install from Tailscale's apt repo; disable key expiry for this device in the admin
   console; dashboard and SSH reachable from the Owner's phone on cellular. Document in
